@@ -1,0 +1,113 @@
+{
+  "name": "gir-project-manager",
+  "version": "1.0.0",
+  "description": "GIR Project Manager - Internal project management system",
+  "author": "GET IT RENDERED",
+  "main": "public/electron.js",
+  "private": true,
+  "homepage": ".",
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "electron": "electron .",
+    "electron-dev": "concurrently \"npm start\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron-pack": "electron-builder",
+    "dist": "npm run build && electron-builder",
+    "dist-win": "npm run build && electron-builder --win",
+    "dist-mac": "npm run build && electron-builder --mac",
+    "dist-linux": "npm run build && electron-builder --linux",
+    "download-icon": "node download-icon.js",
+    "setup-electron": "npm run download-icon",
+    "lint": "eslint src --ext .js,.jsx,.ts,.tsx"
+  },
+  "build": {
+    "appId": "com.gir.projectmanager",
+    "productName": "GET IT RENDERED - Project Manager",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "build/**/*",
+      "node_modules/**/*",
+      "public/electron.js",
+      "public/preload.js",
+      "public/icon.png"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "public/icon.png",
+      "sign": false,
+      "signAndEditExecutable": false
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "public/icon.png"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "public/icon.png"
+    },
+    "forceCodeSigning": false,
+    "extraResources": [
+      {
+        "from": "build",
+        "to": "build"
+      }
+    ]
+  },
+  "dependencies": {
+    "@headlessui/react": "^1.7.17",
+    "@heroicons/react": "^2.0.18",
+    "@react-pdf/renderer": "^4.3.0",
+    "@supabase/supabase-js": "^2.53.0",
+    "autoprefixer": "^10.4.14",
+    "axios": "^1.5.0",
+    "date-fns": "^2.30.0",
+    "electron-is-dev": "^2.0.0",
+    "express": "^5.1.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^2.5.2",
+    "lucide-react": "^0.294.0",
+    "postcss": "^8.4.24",
+    "react": "^18.2.0",
+    "react-beautiful-dnd": "^13.1.1",
+    "react-dom": "^18.2.0",
+    "react-dropzone": "^14.2.3",
+    "react-hook-form": "^7.45.4",
+    "react-hot-toast": "^2.4.1",
+    "react-query": "^3.39.3",
+    "react-router-dom": "^6.8.0",
+    "react-scripts": "5.0.1",
+    "react-to-pdf": "^2.0.1",
+    "socket.io-client": "^4.7.2",
+    "tailwindcss": "^3.3.0",
+    "uuid": "^9.0.0",
+    "xlsx": "^0.18.5",
+    "zustand": "^4.4.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@types/uuid": "^9.0.0",
+    "concurrently": "^8.2.0",
+    "electron": "^37.2.5",
+    "electron-builder": "^24.6.4",
+    "eslint": "^8.45.0",
+    "eslint-config-react-app": "^7.0.1",
+    "wait-on": "^7.0.1"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
