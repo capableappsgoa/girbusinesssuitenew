@@ -10,6 +10,7 @@ import Team from './components/team/Team';
 import Settings from './components/Settings';
 import Companies from './components/companies/Companies';
 import Revenue from './components/revenue/Revenue';
+import InvoicePage from './components/invoice/InvoicePage';
 import Layout from './components/layout/Layout';
 import './App.css';
 
@@ -126,6 +127,7 @@ function App() {
               {['admin', 'manager', 'billing'].includes(user?.role) && (
                 <Route path="/revenue" element={<Revenue />} />
               )}
+              <Route path="/invoice" element={<InvoicePage />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>

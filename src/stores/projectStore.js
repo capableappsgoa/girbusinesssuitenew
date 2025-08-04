@@ -22,7 +22,8 @@ import {
   updateCompanyService,
   deleteCompanyService,
   markProjectAsPaid,
-  markProjectAsUnpaid
+  markProjectAsUnpaid,
+  updateProjectDiscount
 } from '../services/projectService';
 
 const useProjectStore = create(
@@ -32,6 +33,7 @@ const useProjectStore = create(
       currentProject: null,
       companies: [],
       isLoading: false,
+      invoiceDiscountPercentage: 0,
 
       // Clear all data and load fresh from database
       clearAndLoadProjects: async () => {
@@ -155,6 +157,31 @@ const useProjectStore = create(
 
       setCurrentProject: (project) => {
         set({ currentProject: project });
+      },
+
+      setInvoiceDiscountPercentage: (percentage) => {
+        set({ invoiceDiscountPercentage: percentage });
+      },
+
+      // Update project discount in database
+      updateProjectDiscount: async (projectId, discountPercentage) => {
+        try {
+          const updatedProject = await updateProjectDiscount(projectId, discountPercentage);
+          
+          // Update local state
+          set((state) => ({
+            projects: state.projects.map(project =>
+              project.id === projectId 
+                ? { ...project, discount_percentage: discountPercentage }
+                : project
+            )
+          }));
+          
+          return { success: true, project: updatedProject };
+        } catch (error) {
+          console.error('Failed to update project discount:', error);
+          return { success: false, error: error.message };
+        }
       },
 
       // Billing Items Management

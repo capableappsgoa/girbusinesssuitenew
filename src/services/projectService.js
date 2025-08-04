@@ -147,6 +147,7 @@ export const fetchProjects = async () => {
 
           return {
             ...project,
+            discountPercentage: project.discount_percentage || 0,
             tasks: mappedTasks,
             issues: mappedIssues,
             billingItems: mappedBillingItems,
@@ -356,15 +357,26 @@ export const createBillingItem = async (projectId, billingItemData) => {
     console.log('Creating billing item for project:', projectId);
     console.log('Billing item data:', billingItemData);
     
+    // Ensure we have valid data
+    if (!billingItemData.name || !billingItemData.description) {
+      throw new Error('Name and description are required');
+    }
+    
+    const quantity = parseInt(billingItemData.quantity) || 1;
+    const unitPrice = parseFloat(billingItemData.unitPrice) || 0;
+    const totalPrice = quantity * unitPrice;
+    
     const billingItemForDB = {
       project_id: projectId,
       name: billingItemData.name,
       description: billingItemData.description,
-      quantity: billingItemData.quantity,
-      unit_price: billingItemData.unitPrice,
-      total_price: billingItemData.quantity * billingItemData.unitPrice,
+      quantity: quantity,
+      unit_price: unitPrice,
+      total_price: totalPrice,
       status: billingItemData.status || 'pending'
     };
+
+    console.log('Billing item for database:', billingItemForDB);
 
     const { data, error } = await supabase
       .from(TABLES.BILLING_ITEMS)
@@ -374,6 +386,12 @@ export const createBillingItem = async (projectId, billingItemData) => {
 
     if (error) {
       console.error('Supabase error creating billing item:', error);
+      console.error('Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       throw error;
     }
 
@@ -404,15 +422,26 @@ export const updateBillingItem = async (billingItemId, updates) => {
     console.log('Updating billing item:', billingItemId);
     console.log('Updates:', updates);
     
+    // Ensure we have valid data
+    if (!updates.name || !updates.description) {
+      throw new Error('Name and description are required');
+    }
+    
+    const quantity = parseInt(updates.quantity) || 1;
+    const unitPrice = parseFloat(updates.unitPrice) || 0;
+    const totalPrice = quantity * unitPrice;
+    
     const updatesForDB = {
       name: updates.name,
       description: updates.description,
-      quantity: updates.quantity,
-      unit_price: updates.unitPrice,
-      total_price: updates.quantity * updates.unitPrice,
-      status: updates.status,
+      quantity: quantity,
+      unit_price: unitPrice,
+      total_price: totalPrice,
+      status: updates.status || 'pending',
       updated_at: new Date().toISOString()
     };
+
+    console.log('Updates for database:', updatesForDB);
 
     const { data, error } = await supabase
       .from(TABLES.BILLING_ITEMS)
@@ -423,6 +452,12 @@ export const updateBillingItem = async (billingItemId, updates) => {
 
     if (error) {
       console.error('Supabase error updating billing item:', error);
+      console.error('Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       throw error;
     }
 
@@ -1630,6 +1665,28 @@ export const markProjectAsUnpaid = async (projectId) => {
     return { success: true, data };
   } catch (error) {
     console.error('Error in markProjectAsUnpaid:', error);
+    throw error;
+  }
+};
+
+// Update project discount percentage
+export const updateProjectDiscount = async (projectId, discountPercentage) => {
+  try {
+    const { data, error } = await supabase
+      .from(TABLES.PROJECTS)
+      .update({ discount_percentage: discountPercentage })
+      .eq('id', projectId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating project discount:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Failed to update project discount:', error);
     throw error;
   }
 }; 

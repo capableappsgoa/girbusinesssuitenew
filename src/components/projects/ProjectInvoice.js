@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useProjectStore } from '../../stores/projectStore';
 import { useAuthStore } from '../../stores/authStore';
 import { 
@@ -26,6 +27,7 @@ import toast from 'react-hot-toast';
 import InvoiceGenerator from '../invoice/InvoiceGenerator';
 
 const ProjectInvoice = ({ project }) => {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const { 
     addBillingItem, 
@@ -34,13 +36,17 @@ const ProjectInvoice = ({ project }) => {
     getProjectBillingTotal,
     getProjectSpentTotal,
     getProjectRemainingTotal,
-    loadProjects
+    loadProjects,
+    setCurrentProject,
+    setInvoiceDiscountPercentage,
+    updateProjectDiscount,
+    invoiceDiscountPercentage
   } = useProjectStore();
   
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [discount, setDiscount] = useState(0);
+  const [discount, setDiscount] = useState(project?.discountPercentage || invoiceDiscountPercentage || 0);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [newBillingItem, setNewBillingItem] = useState({
     name: '',
@@ -54,6 +60,24 @@ const ProjectInvoice = ({ project }) => {
   const remainingTotal = getProjectRemainingTotal(project?.id); // Remaining items (pending + in-progress)
   const discountAmount = (billingTotal * discount) / 100;
   const finalTotal = billingTotal - discountAmount;
+
+  // Synchronize discount with store and project
+  useEffect(() => {
+    const projectDiscount = project?.discountPercentage || 0;
+    const storeDiscount = invoiceDiscountPercentage || 0;
+    const currentDiscount = Math.max(projectDiscount, storeDiscount);
+    
+    if (currentDiscount !== discount) {
+      setDiscount(currentDiscount);
+    }
+  }, [invoiceDiscountPercentage, project?.discountPercentage, discount]);
+
+  // Update store when local discount changes
+  useEffect(() => {
+    if (discount !== invoiceDiscountPercentage) {
+      setInvoiceDiscountPercentage(discount);
+    }
+  }, [discount, invoiceDiscountPercentage, setInvoiceDiscountPercentage]);
 
   // Debug: Log project billing items
   console.log('Project billing items:', project?.billingItems);
@@ -135,8 +159,10 @@ const ProjectInvoice = ({ project }) => {
   };
 
   const handleGenerateInvoice = () => {
-    // Show invoice generator modal
-    setIsInvoiceModalOpen(true);
+    // Set the current project and discount percentage, then navigate to the invoice page
+    setCurrentProject(project);
+    setInvoiceDiscountPercentage(discount);
+    navigate('/invoice');
   };
 
   const getStatusColor = (status) => {
@@ -307,28 +333,49 @@ const ProjectInvoice = ({ project }) => {
             <h3 className="font-semibold text-gray-900">Invoice Discount</h3>
           </div>
           <div className="flex items-center space-x-2">
-            <input
-              type="number"
-              min="0"
-              max="100"
-              value={discount}
-              onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-              className="w-24 px-3 py-2 border rounded-lg text-sm font-medium"
-              placeholder="0"
-            />
+                         <input
+               type="number"
+               min="0"
+               max="100"
+               value={discount}
+               onChange={async (e) => {
+                 const newValue = parseFloat(e.target.value) || 0;
+                 setDiscount(newValue);
+                 setInvoiceDiscountPercentage(newValue);
+                 
+                 // Save to database
+                 if (project?.id) {
+                   try {
+                     await updateProjectDiscount(project.id, newValue);
+                     console.log('Discount saved to database:', newValue);
+                   } catch (error) {
+                     console.error('Failed to save discount to database:', error);
+                     toast.error('Failed to save discount. Please try again.');
+                   }
+                 }
+               }}
+               className="w-24 px-3 py-2 border rounded-lg text-sm font-medium"
+               placeholder="0"
+             />
             <span className="text-sm text-gray-500 font-medium">%</span>
           </div>
         </div>
         
         {discount > 0 && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-700">Discount Amount:</span>
-              <span className="font-bold text-red-600">-₹{discountAmount.toLocaleString()}</span>
+          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-300 rounded-lg p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-gray-700 font-medium">Original Total:</span>
+              <span className="font-bold text-gray-900">₹{billingTotal.toLocaleString()}</span>
             </div>
-            <div className="flex items-center justify-between text-sm mt-1">
-              <span className="text-gray-700">Final Total:</span>
-              <span className="font-bold text-gray-900">₹{finalTotal.toLocaleString()}</span>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-gray-700 font-medium">Discount ({discount}%):</span>
+              <span className="font-bold text-red-600 text-lg">-₹{discountAmount.toLocaleString()}</span>
+            </div>
+            <div className="border-t border-yellow-200 pt-2">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-900 font-bold text-lg">Final Total:</span>
+                <span className="font-bold text-green-600 text-xl">₹{finalTotal.toLocaleString()}</span>
+              </div>
             </div>
           </div>
         )}

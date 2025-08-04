@@ -1,0 +1,130 @@
+/* A4 Print Styles */
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  
+  /* Hide everything except the invoice */
+  body * {
+    display: none !important;
+  }
+  
+  /* Show only the invoice container */
+  .a4-container {
+    display: block !important;
+    width: 210mm;
+    height: 297mm;
+    margin: 0;
+    padding: 20mm;
+    box-sizing: border-box;
+    background: white;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  
+  /* Remove shadows and backgrounds for clean print */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  
+  /* Ensure text is black for better print quality */
+  * {
+    color: black !important;
+  }
+  
+  /* Table styles for print */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  
+  th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+  }
+  
+  th {
+    background-color: #f8f9fa !important;
+    font-weight: bold;
+  }
+  
+  /* Ensure proper page breaks */
+  .page-break {
+    page-break-before: always;
+  }
+  
+  .no-break {
+    page-break-inside: avoid;
+  }
+}
+
+/* Screen styles */
+@media screen {
+  .a4-container {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    background: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* GIR Theme Styles */
+  .gir-header {
+    background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+    color: #FFD700;
+    padding: 2rem;
+    border-radius: 8px 8px 0 0;
+  }
+  
+  .gir-logo {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+  }
+  
+  .gir-accent {
+    background: #FFD700;
+    color: #000000;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-weight: bold;
+  }
+  
+  .gir-table-header {
+    background: #000000;
+    color: #FFD700;
+  }
+  
+  .gir-table-row:nth-child(even) {
+    background: #f8f8f8;
+  }
+  
+  .gir-total-section {
+    background: #000000;
+    color: #FFD700;
+    padding: 1rem;
+    border-radius: 4px;
+  }
+  
+  .gir-footer {
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    color: #000000;
+    padding: 1rem;
+    border-radius: 0 0 8px 8px;
+  }
+}
+
+/* Screen styles */
+@media screen {
+  .a4-container {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    background: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+} 

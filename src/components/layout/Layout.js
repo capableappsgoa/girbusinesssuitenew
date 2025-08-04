@@ -15,7 +15,8 @@ import {
   Settings,
   Plus,
   Building2,
-  TrendingUp
+  TrendingUp,
+  FileText
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -47,6 +48,12 @@ const Layout = ({ children }) => {
       name: 'Revenue',
       href: '/revenue',
       icon: TrendingUp,
+      roles: ['admin', 'manager', 'billing']
+    },
+    {
+      name: 'Invoice',
+      href: '/invoice',
+      icon: FileText,
       roles: ['admin', 'manager', 'billing']
     },
     {
