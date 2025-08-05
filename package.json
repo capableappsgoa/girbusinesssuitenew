@@ -33,13 +33,15 @@
       "node_modules/**/*",
       "public/electron.js",
       "public/preload.js",
+      "public/titlebar.js",
       "public/icon.png"
     ],
     "win": {
       "target": "portable",
       "icon": "public/icon.png",
       "sign": false,
-      "signAndEditExecutable": false
+      "signAndEditExecutable": false,
+      "forceCodeSigning": false
     },
     "mac": {
       "target": "dmg",

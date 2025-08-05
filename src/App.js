@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './stores/authStore';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
 import LoginPage from './components/auth/LoginPage';
 import Dashboard from './components/dashboard/Dashboard';
 import Projects from './components/projects/Projects';
@@ -53,6 +54,7 @@ class ErrorBoundary extends React.Component {
 
 function App() {
   const { user, isAuthenticated, checkAuth } = useAuthStore();
+  const onlineStatus = useOnlineStatus();
 
   useEffect(() => {
     const timer = setTimeout(() => {

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useProjectStore } from '../../stores/projectStore';
 import { useAuthStore } from '../../stores/authStore';
+import OnlineStatus from './OnlineStatus';
 import { 
   TrendingUp, 
   Calendar, 
@@ -334,6 +335,11 @@ const Dashboard = () => {
             )}
           </div>
         </div>
+
+        {/* Online Status for Designers */}
+        <div className="bg-white rounded-lg border">
+          <OnlineStatus />
+        </div>
       </div>
     );
   }
@@ -471,8 +477,8 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Project Distribution */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Project Distribution and Online Status */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="bg-white rounded-lg border">
           <div className="p-4 border-b">
             <h3 className="font-semibold text-gray-900">Project Distribution</h3>
@@ -519,6 +525,11 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Online Status Component */}
+        <div className="lg:col-span-1">
+          <OnlineStatus />
         </div>
       </div>
 

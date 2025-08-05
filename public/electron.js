@@ -1,12 +1,13 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
 const path = require('path');
 const isDev = require('electron-is-dev');
+const fs = require('fs');
 
 let mainWindow;
 
 function createWindow() {
   try {
-    // Create the browser window
+    // Create the browser window with frameless style
     mainWindow = new BrowserWindow({
       width: 1400,
       height: 900,
@@ -17,45 +18,32 @@ function createWindow() {
         nodeIntegration: false,
         contextIsolation: true,
         enableRemoteModule: false,
-        preload: path.join(__dirname, 'preload.js')
+        preload: path.join(__dirname, 'preload.js'),
+        // Fix focus and cursor issues
+        webSecurity: true,
+        allowRunningInsecureContent: false,
+        experimentalFeatures: false,
+        // Enable better input handling
+        spellcheck: false,
+        // Improve form interaction
+        enableWebSQL: false,
+        // Better focus management
+        backgroundThrottling: false
       },
-      titleBarStyle: 'default',
+      frame: false, // Remove default window frame
+      titleBarStyle: 'hidden',
       show: false,
       title: 'GET IT RENDERED'
     });
 
     // Load the app
-    const startUrl = 'https://girbusinesssuiteapp.vercel.app/' ;
-    
-
+    const startUrl = 'https://girbusinesssuitenew.vercel.app/' ;
     
     mainWindow.loadURL(startUrl);
 
-    // Show window when ready
-    mainWindow.once('ready-to-show', () => {
-      mainWindow.show();
-    });
-
-    // Open DevTools in development
-    if (isDev) {
-      mainWindow.webContents.openDevTools();
-    }
-
-    // Handle window closed
-    mainWindow.on('closed', () => {
-      mainWindow = null;
-    });
-
-    // Handle uncaught exceptions
-    mainWindow.webContents.on('crashed', (event, killed) => {
-      console.error('Renderer process crashed:', event, killed);
-    });
-
-    // Handle renderer errors
-    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-      console.error('Failed to load:', errorCode, errorDescription);
-    });
-
+    // Remove titlebar injection to fix focus issues
+    // The titlebar was causing focus glitching in forms
+    
   } catch (error) {
     console.error('Error creating window:', error);
   }
@@ -129,85 +117,26 @@ ipcMain.handle('save-file', async (event, options) => {
   }
 });
 
-// Create application menu
-const template = [
-  {
-    label: 'File',
-    submenu: [
-      {
-        label: 'New Project',
-        accelerator: 'CmdOrCtrl+N',
-        click: () => {
-          mainWindow.webContents.send('new-project');
-        }
-      },
-      {
-        label: 'Open Project',
-        accelerator: 'CmdOrCtrl+O',
-        click: () => {
-          mainWindow.webContents.send('open-project');
-        }
-      },
-      { type: 'separator' },
-      {
-        label: 'Exit',
-        accelerator: process.platform === 'darwin' ? 'Cmd+Q' : 'Ctrl+Q',
-        click: () => {
-          app.quit();
-        }
-      }
-    ]
-  },
-  {
-    label: 'Edit',
-    submenu: [
-      { role: 'undo' },
-      { role: 'redo' },
-      { type: 'separator' },
-      { role: 'cut' },
-      { role: 'copy' },
-      { role: 'paste' }
-    ]
-  },
-  {
-    label: 'View',
-    submenu: [
-      { role: 'reload' },
-      { role: 'forceReload' },
-      { role: 'toggleDevTools' },
-      { type: 'separator' },
-      { role: 'resetZoom' },
-      { role: 'zoomIn' },
-      { role: 'zoomOut' },
-      { type: 'separator' },
-      { role: 'togglefullscreen' }
-    ]
-  },
-  {
-    label: 'Window',
-    submenu: [
-      { role: 'minimize' },
-      { role: 'close' }
-    ]
+// Window control handlers
+ipcMain.handle('minimize-window', () => {
+  mainWindow.minimize();
+});
+
+ipcMain.handle('maximize-window', () => {
+  if (mainWindow.isMaximized()) {
+    mainWindow.unmaximize();
+  } else {
+    mainWindow.maximize();
   }
-];
+});
 
-if (process.platform === 'darwin') {
-  template.unshift({
-    label: app.getName(),
-    submenu: [
-      { role: 'about' },
-      { type: 'separator' },
-      { role: 'services' },
-      { type: 'separator' },
-      { role: 'hide' },
-      { role: 'hideothers' },
-      { role: 'unhide' },
-      { type: 'separator' },
-      { role: 'quit' }
-    ]
-  });
-}
+ipcMain.handle('close-window', () => {
+  mainWindow.close();
+});
 
-const menu = Menu.buildFromTemplate(template);
-Menu.setApplicationMenu(menu); 
+ipcMain.handle('navigate-home', () => {
+  mainWindow.webContents.send('navigate-home');
+});
+
+// Remove the default menu completely
+Menu.setApplicationMenu(null); 

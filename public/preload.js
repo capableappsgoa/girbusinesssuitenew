@@ -31,6 +31,39 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }
   },
   
+  // Window control functions
+  minimizeWindow: () => {
+    try {
+      ipcRenderer.invoke('minimize-window');
+    } catch (error) {
+      console.error('Error in minimizeWindow:', error);
+    }
+  },
+  
+  maximizeWindow: () => {
+    try {
+      ipcRenderer.invoke('maximize-window');
+    } catch (error) {
+      console.error('Error in maximizeWindow:', error);
+    }
+  },
+  
+  closeWindow: () => {
+    try {
+      ipcRenderer.invoke('close-window');
+    } catch (error) {
+      console.error('Error in closeWindow:', error);
+    }
+  },
+  
+  navigateHome: () => {
+    try {
+      ipcRenderer.invoke('navigate-home');
+    } catch (error) {
+      console.error('Error in navigateHome:', error);
+    }
+  },
+  
   // Menu events
   onNewProject: (callback) => {
     try {
@@ -45,6 +78,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.on('open-project', callback);
     } catch (error) {
       console.error('Error in onOpenProject:', error);
+    }
+  },
+  
+  onNavigateHome: (callback) => {
+    try {
+      ipcRenderer.on('navigate-home', callback);
+    } catch (error) {
+      console.error('Error in onNavigateHome:', error);
     }
   },
   
