@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import CreateProjectModal from './CreateProjectModal';
+import CompanyLogo from '../common/CompanyLogo';
 import toast from 'react-hot-toast';
 
 const Projects = () => {
@@ -303,8 +304,8 @@ const Projects = () => {
 
                     {/* Company Name */}
                     {project.company && (
-                      <div className="flex items-center space-x-1 text-sm">
-                        <Building2 className="h-4 w-4 text-gray-400" />
+                      <div className="flex items-center space-x-2 text-sm">
+                        <CompanyLogo company={project.company} size="sm" />
                         <span className="text-gray-600">{project.company.name}</span>
                       </div>
                     )}

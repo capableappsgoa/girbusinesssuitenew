@@ -5,6 +5,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { createBillingItems } from '../../services/projectService';
 import { toast } from 'react-hot-toast';
 import { X, Calendar, DollarSign, Users, FileText, Plus, Trash2 } from 'lucide-react';
+import CompanyLogo from '../common/CompanyLogo';
 
 const CreateProjectModal = ({ isOpen, onClose }) => {
   const { register, handleSubmit, formState: { errors }, reset, watch } = useForm();
@@ -217,6 +218,12 @@ const CreateProjectModal = ({ isOpen, onClose }) => {
                         </option>
                       ))}
                     </select>
+                    {selectedCompany && (
+                      <div className="mt-2 flex items-center space-x-2">
+                        <CompanyLogo company={selectedCompany} size="sm" />
+                        <span className="text-sm text-gray-600">{selectedCompany.name}</span>
+                      </div>
+                    )}
                   </div>
                 )}
 

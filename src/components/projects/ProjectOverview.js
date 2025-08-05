@@ -1,6 +1,7 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { Calendar, DollarSign, Users, Clock, AlertTriangle, Building2 } from 'lucide-react';
+import CompanyLogo from '../common/CompanyLogo';
 
 // Safe date formatting function
 const safeFormat = (dateValue, formatString) => {
@@ -64,7 +65,7 @@ const ProjectOverview = ({ project }) => {
 
             {project.company && (
               <div className="flex items-center space-x-3">
-                <Building2 className="h-5 w-5 text-gray-400" />
+                <CompanyLogo company={project.company} size="sm" />
                 <div>
                   <p className="text-sm font-medium text-gray-900">Company</p>
                   <p className="text-sm text-gray-600">{project.company.name}</p>
