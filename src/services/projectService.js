@@ -89,7 +89,9 @@ export const fetchProjects = async () => {
                 address: companyData.address,
                 contactPerson: companyData.contact_person,
                 website: companyData.website,
-                industry: companyData.industry
+                industry: companyData.industry,
+                logoUrl: companyData.logo_url,
+                logoAltText: companyData.logo_alt_text
               };
             }
           }
@@ -1408,6 +1410,8 @@ export const fetchCompanies = async () => {
         website: company.website,
         industry: company.industry,
         notes: company.notes,
+        logoUrl: company.logo_url,
+        logoAltText: company.logo_alt_text,
         isActive: company.is_active,
         createdBy: company.created_by,
         createdAt: company.created_at,
@@ -1483,6 +1487,8 @@ export const createCompanyService = async (companyData) => {
         website: companyData.website,
         industry: companyData.industry,
         notes: companyData.notes,
+        logo_url: companyData.logo_url,
+        logo_alt_text: companyData.logo_alt_text,
         is_active: companyData.isActive !== undefined ? companyData.isActive : true,
         created_by: user.id,
         created_at: companyData.created_at || new Date().toISOString(),
@@ -1507,6 +1513,8 @@ export const createCompanyService = async (companyData) => {
       website: data.website,
       industry: data.industry,
       notes: data.notes,
+      logoUrl: data.logo_url,
+      logoAltText: data.logo_alt_text,
       isActive: data.is_active,
       createdBy: data.created_by,
       createdAt: data.created_at,
@@ -1557,6 +1565,8 @@ export const updateCompanyService = async (companyId, updates) => {
         website: updates.website,
         industry: updates.industry,
         notes: updates.notes,
+        logo_url: updates.logo_url,
+        logo_alt_text: updates.logo_alt_text,
         is_active: updates.isActive,
         updated_at: updates.updated_at || new Date().toISOString()
       })
@@ -1580,6 +1590,8 @@ export const updateCompanyService = async (companyId, updates) => {
       website: data.website,
       industry: data.industry,
       notes: data.notes,
+      logoUrl: data.logo_url,
+      logoAltText: data.logo_alt_text,
       isActive: data.is_active,
       createdBy: data.created_by,
       createdAt: data.created_at,

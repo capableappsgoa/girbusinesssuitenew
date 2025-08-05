@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import InvoiceGenerator from '../invoice/InvoiceGenerator';
+import CompanyLogo from '../common/CompanyLogo';
 
 const ProjectInvoice = ({ project }) => {
   const navigate = useNavigate();
@@ -311,14 +312,19 @@ const ProjectInvoice = ({ project }) => {
       {project.company && (
         <div className="bg-white rounded-lg border p-4">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Billed To</p>
-              <p className="text-lg font-semibold text-gray-900">{project.company.name}</p>
-              {project.company.email && (
-                <p className="text-sm text-gray-600">{project.company.email}</p>
-              )}
+            <div className="flex items-center space-x-4">
+              <CompanyLogo company={project.company} size="md" />
+              <div>
+                <p className="text-sm text-gray-500">Billed To</p>
+                <p className="text-lg font-semibold text-gray-900">{project.company.name}</p>
+                {project.company.email && (
+                  <p className="text-sm text-gray-600">{project.company.email}</p>
+                )}
+                {project.company.industry && (
+                  <p className="text-sm text-gray-500">{project.company.industry}</p>
+                )}
+              </div>
             </div>
-            <Building2 size={24} className="text-gray-400" />
           </div>
         </div>
       )}

@@ -54,50 +54,85 @@ function createWindow() {
     
     mainWindow.loadURL(startUrl);
 
-    // Add simple window controls after page loads
+    // Add proper title bar after page loads
     mainWindow.webContents.on('did-finish-load', () => {
       try {
-        const windowControlsScript = `
-          // Simple window controls that don't interfere with clicks
+        const titleBarScript = `
+          // Proper title bar with web content clickable
           (function() {
-            console.log('Adding window controls...');
+            console.log('Adding title bar...');
             
-            // Create window controls container
-            const controlsContainer = document.createElement('div');
-            controlsContainer.id = 'window-controls';
-            controlsContainer.style.cssText = \`
+            // Create title bar container
+            const titleBar = document.createElement('div');
+            titleBar.id = 'electron-titlebar';
+            titleBar.style.cssText = \`
               position: fixed;
-              top: 8px;
-              right: 8px;
-              z-index: 9999;
+              top: 0;
+              left: 0;
+              right: 0;
+              height: 32px;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
               display: flex;
-              background: rgba(31, 41, 55, 0.8);
-              border-radius: 6px;
-              padding: 4px;
-              gap: 2px;
-              backdrop-filter: blur(4px);
-              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+              align-items: center;
+              justify-content: space-between;
+              padding: 0 8px;
+              z-index: 9999;
+              -webkit-app-region: drag;
+              user-select: none;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            \`;
+            
+            // Create left side with app title
+            const leftSection = document.createElement('div');
+            leftSection.style.cssText = \`
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              -webkit-app-region: drag;
+            \`;
+            
+            // App title
+            const appTitle = document.createElement('span');
+            appTitle.textContent = 'GET IT RENDERED';
+            appTitle.style.cssText = \`
+              color: white;
+              font-size: 12px;
+              font-weight: 600;
+              letter-spacing: 0.5px;
+            \`;
+            
+            leftSection.appendChild(appTitle);
+            
+            // Create right side with window controls
+            const rightSection = document.createElement('div');
+            rightSection.style.cssText = \`
+              display: flex;
+              align-items: center;
+              gap: 4px;
+              -webkit-app-region: no-drag;
             \`;
             
             // Minimize button
             const minimizeBtn = document.createElement('button');
             minimizeBtn.innerHTML = '─';
             minimizeBtn.style.cssText = \`
-              width: 28px;
-              height: 28px;
               background: transparent;
-              color: #d1d5db;
+              color: white;
               border: none;
-              cursor: pointer;
-              font-size: 16px;
+              width: 24px;
+              height: 24px;
               display: flex;
               align-items: center;
               justify-content: center;
-              transition: all 0.2s;
+              cursor: pointer;
+              font-size: 14px;
+              transition: background-color 0.2s;
               border-radius: 4px;
+              -webkit-app-region: no-drag;
             \`;
             minimizeBtn.onmouseover = () => {
-              minimizeBtn.style.background = 'rgba(255, 255, 255, 0.1)';
+              minimizeBtn.style.background = 'rgba(255, 255, 255, 0.2)';
             };
             minimizeBtn.onmouseout = () => {
               minimizeBtn.style.background = 'transparent';
@@ -113,7 +148,7 @@ function createWindow() {
             maximizeBtn.innerHTML = '□';
             maximizeBtn.style.cssText = minimizeBtn.style.cssText;
             maximizeBtn.onmouseover = () => {
-              maximizeBtn.style.background = 'rgba(255, 255, 255, 0.1)';
+              maximizeBtn.style.background = 'rgba(255, 255, 255, 0.2)';
             };
             maximizeBtn.onmouseout = () => {
               maximizeBtn.style.background = 'transparent';
@@ -130,11 +165,9 @@ function createWindow() {
             closeBtn.style.cssText = minimizeBtn.style.cssText;
             closeBtn.onmouseover = () => {
               closeBtn.style.background = 'rgba(239, 68, 68, 0.8)';
-              closeBtn.style.color = 'white';
             };
             closeBtn.onmouseout = () => {
               closeBtn.style.background = 'transparent';
-              closeBtn.style.color = '#d1d5db';
             };
             closeBtn.onclick = () => {
               if (window.electronAPI) {
@@ -142,21 +175,69 @@ function createWindow() {
               }
             };
             
-            // Add buttons to container
-            controlsContainer.appendChild(minimizeBtn);
-            controlsContainer.appendChild(maximizeBtn);
-            controlsContainer.appendChild(closeBtn);
+            rightSection.appendChild(minimizeBtn);
+            rightSection.appendChild(maximizeBtn);
+            rightSection.appendChild(closeBtn);
             
-            // Add to page
-            document.body.appendChild(controlsContainer);
+            // Assemble title bar
+            titleBar.appendChild(leftSection);
+            titleBar.appendChild(rightSection);
             
-            console.log('Window controls added successfully');
+            // Add title bar to page
+            document.body.insertBefore(titleBar, document.body.firstChild);
+            
+            // Adjust body padding to account for title bar
+            document.body.style.paddingTop = '32px';
+            
+            // Make web content clickable and draggable
+            const webContent = document.body;
+            webContent.style.cssText += \`
+              -webkit-app-region: no-drag;
+              cursor: default;
+            \`;
+            
+            // Allow specific elements to be draggable (like the title bar area)
+            const makeDraggable = (element) => {
+              element.style.cssText += \`
+                -webkit-app-region: drag;
+              \`;
+            };
+            
+            // Make buttons and interactive elements non-draggable
+            const makeNonDraggable = (element) => {
+              element.style.cssText += \`
+                -webkit-app-region: no-drag;
+              \`;
+            };
+            
+            // Apply to existing elements
+            const buttons = document.querySelectorAll('button, a, input, textarea, select, [role="button"]');
+            buttons.forEach(makeNonDraggable);
+            
+            // Watch for new elements
+            const observer = new MutationObserver(function(mutations) {
+              mutations.forEach(function(mutation) {
+                mutation.addedNodes.forEach(function(node) {
+                  if (node.nodeType === 1) { // Element node
+                    const newButtons = node.querySelectorAll ? node.querySelectorAll('button, a, input, textarea, select, [role="button"]') : [];
+                    newButtons.forEach(makeNonDraggable);
+                  }
+                });
+              });
+            });
+            
+            observer.observe(document.body, {
+              childList: true,
+              subtree: true
+            });
+            
+            console.log('Title bar added successfully with web content clickable');
           })();
         `;
         
-        mainWindow.webContents.executeJavaScript(windowControlsScript);
+        mainWindow.webContents.executeJavaScript(titleBarScript);
       } catch (error) {
-        console.error('Error adding window controls:', error);
+        console.error('Error adding title bar:', error);
       }
     });
 

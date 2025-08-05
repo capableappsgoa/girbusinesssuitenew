@@ -22,7 +22,10 @@ import {
   X,
   CheckCircle,
   Clock,
-  ExternalLink
+  ExternalLink,
+  Upload,
+  Image,
+  Link
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -37,6 +40,9 @@ const Companies = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [isLoading, setIsLoading] = useState(false);
+  const [logoInputType, setLogoInputType] = useState('url'); // 'url' or 'upload'
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState('');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -46,7 +52,9 @@ const Companies = () => {
     contact_person: '',
     website: '',
     industry: '',
-    notes: ''
+    notes: '',
+    logo_url: '',
+    logo_alt_text: ''
   });
 
   useEffect(() => {
@@ -55,16 +63,81 @@ const Companies = () => {
     }
   }, [user, loadCompanies]);
 
+  const handleLogoFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast.error('Logo file size must be less than 5MB');
+        return;
+      }
+      
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file');
+        return;
+      }
+      
+      setLogoFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setLogoPreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleLogoUrlChange = (e) => {
+    const url = e.target.value;
+    setFormData({...formData, logo_url: url});
+    
+    // Create preview from URL
+    if (url) {
+      setLogoPreview(url);
+    } else {
+      setLogoPreview('');
+    }
+  };
+
+  const uploadLogoToStorage = async (file) => {
+    try {
+      // For now, we'll use a simple approach - in production you'd upload to cloud storage
+      // This is a placeholder for actual file upload implementation
+      const fileName = `company-logos/${Date.now()}-${file.name}`;
+      
+      // In a real implementation, you'd upload to Supabase Storage or another service
+      // For now, we'll return a placeholder URL
+      return `https://via.placeholder.com/150x150/667eea/ffffff?text=${encodeURIComponent('LOGO')}`;
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      throw new Error('Failed to upload logo');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
+      let finalLogoUrl = formData.logo_url;
+      let finalLogoAltText = formData.logo_alt_text || formData.name;
+
+      // Handle file upload if logo file is selected
+      if (logoInputType === 'upload' && logoFile) {
+        finalLogoUrl = await uploadLogoToStorage(logoFile);
+      }
+
+      const companyData = {
+        ...formData,
+        logo_url: finalLogoUrl,
+        logo_alt_text: finalLogoAltText
+      };
+
       if (selectedCompany) {
-        await updateCompany(selectedCompany.id, formData);
+        await updateCompany(selectedCompany.id, companyData);
         toast.success('Company updated successfully');
       } else {
-        await addCompany(formData);
+        await addCompany(companyData);
         toast.success('Company created successfully');
       }
       
@@ -90,8 +163,19 @@ const Companies = () => {
       contact_person: company.contact_person || '',
       website: company.website || '',
       industry: company.industry || '',
-      notes: company.notes || ''
+      notes: company.notes || '',
+      logo_url: company.logoUrl || '',
+      logo_alt_text: company.logoAltText || ''
     });
+    
+    // Set logo preview
+    if (company.logoUrl) {
+      setLogoPreview(company.logoUrl);
+      setLogoInputType('url');
+    } else {
+      setLogoPreview('');
+    }
+    
     setIsEditModalOpen(true);
   };
 
@@ -116,8 +200,13 @@ const Companies = () => {
       contact_person: '',
       website: '',
       industry: '',
-      notes: ''
+      notes: '',
+      logo_url: '',
+      logo_alt_text: ''
     });
+    setLogoFile(null);
+    setLogoPreview('');
+    setLogoInputType('url');
   };
 
   const openAddModal = () => {
@@ -236,9 +325,26 @@ const Companies = () => {
           <div key={company.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
             <div className="flex justify-between items-start mb-4">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <Building2 className="h-5 w-5 text-white" />
-                </div>
+                {company.logoUrl ? (
+                  <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200 flex items-center justify-center bg-white">
+                    <img 
+                      src={company.logoUrl} 
+                      alt={company.logoAltText || company.name}
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                    <div className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center" style={{display: 'none'}}>
+                      <Building2 className="h-5 w-5 text-white" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <Building2 className="h-5 w-5 text-white" />
+                  </div>
+                )}
                 <div>
                   <h3 className="font-semibold text-gray-900">{company.name}</h3>
                   <p className="text-sm text-gray-500">{company.industry || 'No industry specified'}</p>
@@ -439,6 +545,64 @@ const Companies = () => {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Company Logo</label>
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="radio"
+                    id="logo-url"
+                    name="logo-input-type"
+                    value="url"
+                    checked={logoInputType === 'url'}
+                    onChange={() => setLogoInputType('url')}
+                    className="mr-2"
+                  />
+                  <label htmlFor="logo-url">URL</label>
+                  <input
+                    type="radio"
+                    id="logo-upload"
+                    name="logo-input-type"
+                    value="upload"
+                    checked={logoInputType === 'upload'}
+                    onChange={() => setLogoInputType('upload')}
+                    className="mr-2"
+                  />
+                  <label htmlFor="logo-upload">Upload</label>
+                </div>
+                {logoInputType === 'url' && (
+                  <input
+                    type="url"
+                    value={formData.logo_url}
+                    onChange={handleLogoUrlChange}
+                    className="input-field w-full mt-2"
+                    placeholder="https://example.com/logo.png"
+                  />
+                )}
+                {logoInputType === 'upload' && (
+                  <div className="mt-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoFileChange}
+                      className="input-field w-full"
+                    />
+                    {logoFile && (
+                      <div className="mt-2 flex items-center text-sm text-gray-600">
+                        <Image className="h-4 w-4 mr-2" />
+                        <span>Selected file: {logoFile.name}</span>
+                      </div>
+                    )}
+                    {logoPreview && (
+                      <div className="mt-2 flex items-center text-sm text-gray-600">
+                        <Eye className="h-4 w-4 mr-2" />
+                        <span>Preview:</span>
+                        <img src={logoPreview} alt="Company Logo Preview" className="ml-2 h-10 w-10 object-contain rounded-md" />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"
@@ -548,6 +712,64 @@ const Companies = () => {
                   className="input-field w-full"
                   rows="3"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Company Logo</label>
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="radio"
+                    id="logo-url-edit"
+                    name="logo-input-type-edit"
+                    value="url"
+                    checked={logoInputType === 'url'}
+                    onChange={() => setLogoInputType('url')}
+                    className="mr-2"
+                  />
+                  <label htmlFor="logo-url-edit">URL</label>
+                  <input
+                    type="radio"
+                    id="logo-upload-edit"
+                    name="logo-input-type-edit"
+                    value="upload"
+                    checked={logoInputType === 'upload'}
+                    onChange={() => setLogoInputType('upload')}
+                    className="mr-2"
+                  />
+                  <label htmlFor="logo-upload-edit">Upload</label>
+                </div>
+                {logoInputType === 'url' && (
+                  <input
+                    type="url"
+                    value={formData.logo_url}
+                    onChange={handleLogoUrlChange}
+                    className="input-field w-full mt-2"
+                    placeholder="https://example.com/logo.png"
+                  />
+                )}
+                {logoInputType === 'upload' && (
+                  <div className="mt-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoFileChange}
+                      className="input-field w-full"
+                    />
+                    {logoFile && (
+                      <div className="mt-2 flex items-center text-sm text-gray-600">
+                        <Image className="h-4 w-4 mr-2" />
+                        <span>Selected file: {logoFile.name}</span>
+                      </div>
+                    )}
+                    {logoPreview && (
+                      <div className="mt-2 flex items-center text-sm text-gray-600">
+                        <Eye className="h-4 w-4 mr-2" />
+                        <span>Preview:</span>
+                        <img src={logoPreview} alt="Company Logo Preview" className="ml-2 h-10 w-10 object-contain rounded-md" />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end space-x-3 pt-4">

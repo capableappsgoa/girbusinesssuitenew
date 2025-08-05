@@ -23,6 +23,7 @@ import ProjectIssues from './ProjectIssues';
 import ProjectChat from './ProjectChat';
 import ProjectFiles from './ProjectFiles';
 import ProjectInvoice from './ProjectInvoice';
+import CompanyLogo from '../common/CompanyLogo';
 
 const ProjectDetail = () => {
   const { id } = useParams();
@@ -138,9 +139,15 @@ const ProjectDetail = () => {
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
-            <p className="text-gray-600">{project.client}</p>
+          <div className="flex items-center space-x-4">
+            <CompanyLogo company={project.company} size="lg" />
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
+              <p className="text-gray-600">{project.client}</p>
+              {project.company && (
+                <p className="text-sm text-gray-500">{project.company.name}</p>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex items-center space-x-2">
