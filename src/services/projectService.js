@@ -155,6 +155,8 @@ export const fetchProjects = async () => {
             billingItems: mappedBillingItems,
             team: mappedTeamMembers,
             company: company,
+            companyLogoUrl: company?.logoUrl || null,
+            companyLogoAltText: company?.logoAltText || null,
             chat: [], // Placeholder for chat messages
             files: [] // Placeholder for files
           };

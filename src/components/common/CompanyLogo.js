@@ -16,6 +16,8 @@ const CompanyLogo = ({ company, size = 'md', showName = false, className = '' })
     xl: 'h-8 w-8'
   };
 
+
+
   if (!company) {
     return (
       <div className={`${sizeClasses[size]} bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center ${className}`}>

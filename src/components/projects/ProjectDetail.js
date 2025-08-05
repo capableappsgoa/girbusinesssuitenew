@@ -14,7 +14,8 @@ import {
   MessageSquare,
   FileText,
   Upload,
-  Download
+  Download,
+  Building2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import ProjectOverview from './ProjectOverview';
@@ -140,7 +141,26 @@ const ProjectDetail = () => {
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div className="flex items-center space-x-4">
-            <CompanyLogo company={project.company} size="lg" />
+            {project.companyLogoUrl ? (
+              <div className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200 flex items-center justify-center bg-white">
+                <img 
+                  src={project.companyLogoUrl} 
+                  alt={project.companyLogoAltText || project.company?.name || 'Company Logo'}
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+                <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center" style={{display: 'none'}}>
+                  <Building2 className="h-8 w-8 text-white" />
+                </div>
+              </div>
+            ) : (
+              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <Building2 className="h-8 w-8 text-white" />
+              </div>
+            )}
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
               <p className="text-gray-600">{project.client}</p>
