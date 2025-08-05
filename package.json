@@ -24,7 +24,7 @@
   },
   "build": {
     "appId": "com.gir.projectmanager",
-    "productName": "GET IT RENDERED - Project Manager",
+    "productName": "GIR-Project-Manager",
     "directories": {
       "output": "dist"
     },
@@ -33,7 +33,6 @@
       "node_modules/**/*",
       "public/electron.js",
       "public/preload.js",
-      "public/titlebar.js",
       "public/icon.png"
     ],
     "win": {
@@ -41,7 +40,9 @@
       "icon": "public/icon.png",
       "sign": false,
       "signAndEditExecutable": false,
-      "forceCodeSigning": false
+      "forceCodeSigning": false,
+      "certificateFile": null,
+      "certificatePassword": null
     },
     "mac": {
       "target": "dmg",
@@ -57,7 +58,13 @@
         "from": "build",
         "to": "build"
       }
-    ]
+    ],
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   },
   "dependencies": {
     "@headlessui/react": "^1.7.17",
@@ -95,7 +102,7 @@
     "@types/uuid": "^9.0.0",
     "concurrently": "^8.2.0",
     "electron": "^37.2.5",
-    "electron-builder": "^24.6.4",
+    "electron-builder": "^24.13.3",
     "eslint": "^8.45.0",
     "eslint-config-react-app": "^7.0.1",
     "wait-on": "^7.0.1"

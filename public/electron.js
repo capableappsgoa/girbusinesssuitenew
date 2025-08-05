@@ -54,140 +54,122 @@ function createWindow() {
     
     mainWindow.loadURL(startUrl);
 
-    // Add comprehensive focus management after page loads
+    // Add simple window controls after page loads
     mainWindow.webContents.on('did-finish-load', () => {
       try {
-        // Inject focus management script
-        const focusScript = `
-          // Comprehensive focus management for remote app
+        const windowControlsScript = `
+          // Simple window controls that don't interfere with clicks
           (function() {
-            console.log('Injecting focus management script...');
+            console.log('Adding window controls...');
             
-            // Remove any existing focus event listeners
-            const removeExistingListeners = () => {
-              const inputs = document.querySelectorAll('input, textarea, select, [contenteditable]');
-              inputs.forEach(input => {
-                input.removeEventListener('focus', input._focusHandler);
-                input.removeEventListener('blur', input._blurHandler);
-                input.removeEventListener('click', input._clickHandler);
-                input.removeEventListener('mousedown', input._mousedownHandler);
-              });
+            // Create window controls container
+            const controlsContainer = document.createElement('div');
+            controlsContainer.id = 'window-controls';
+            controlsContainer.style.cssText = \`
+              position: fixed;
+              top: 8px;
+              right: 8px;
+              z-index: 9999;
+              display: flex;
+              background: rgba(31, 41, 55, 0.8);
+              border-radius: 6px;
+              padding: 4px;
+              gap: 2px;
+              backdrop-filter: blur(4px);
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            \`;
+            
+            // Minimize button
+            const minimizeBtn = document.createElement('button');
+            minimizeBtn.innerHTML = '─';
+            minimizeBtn.style.cssText = \`
+              width: 28px;
+              height: 28px;
+              background: transparent;
+              color: #d1d5db;
+              border: none;
+              cursor: pointer;
+              font-size: 16px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              transition: all 0.2s;
+              border-radius: 4px;
+            \`;
+            minimizeBtn.onmouseover = () => {
+              minimizeBtn.style.background = 'rgba(255, 255, 255, 0.1)';
+            };
+            minimizeBtn.onmouseout = () => {
+              minimizeBtn.style.background = 'transparent';
+            };
+            minimizeBtn.onclick = () => {
+              if (window.electronAPI) {
+                window.electronAPI.minimizeWindow();
+              }
             };
             
-            // Add proper focus handlers
-            const addFocusHandlers = () => {
-              const inputs = document.querySelectorAll('input, textarea, select, [contenteditable]');
-              inputs.forEach(input => {
-                // Store handlers to avoid duplicates
-                input._focusHandler = function(e) {
-                  e.stopPropagation();
-                  this.style.outline = '2px solid #3b82f6';
-                  this.style.outlineOffset = '2px';
-                };
-                
-                input._blurHandler = function(e) {
-                  this.style.outline = '';
-                  this.style.outlineOffset = '';
-                };
-                
-                input._clickHandler = function(e) {
-                  e.stopPropagation();
-                  setTimeout(() => {
-                    this.focus();
-                    if (this.tagName === 'INPUT' && this.type !== 'file') {
-                      this.select();
-                    }
-                  }, 10);
-                };
-                
-                input._mousedownHandler = function(e) {
-                  e.stopPropagation();
-                  setTimeout(() => {
-                    this.focus();
-                  }, 5);
-                };
-                
-                // Add event listeners
-                input.addEventListener('focus', input._focusHandler, true);
-                input.addEventListener('blur', input._blurHandler, true);
-                input.addEventListener('click', input._clickHandler, true);
-                input.addEventListener('mousedown', input._mousedownHandler, true);
-              });
+            // Maximize button
+            const maximizeBtn = document.createElement('button');
+            maximizeBtn.innerHTML = '□';
+            maximizeBtn.style.cssText = minimizeBtn.style.cssText;
+            maximizeBtn.onmouseover = () => {
+              maximizeBtn.style.background = 'rgba(255, 255, 255, 0.1)';
+            };
+            maximizeBtn.onmouseout = () => {
+              maximizeBtn.style.background = 'transparent';
+            };
+            maximizeBtn.onclick = () => {
+              if (window.electronAPI) {
+                window.electronAPI.maximizeWindow();
+              }
             };
             
-            // Initial setup
-            removeExistingListeners();
-            addFocusHandlers();
-            
-            // Watch for dynamic content changes
-            const observer = new MutationObserver(function(mutations) {
-              let shouldReapply = false;
-              mutations.forEach(function(mutation) {
-                mutation.addedNodes.forEach(function(node) {
-                  if (node.nodeType === 1) { // Element node
-                    if (node.tagName === 'INPUT' || node.tagName === 'TEXTAREA' || node.tagName === 'SELECT' || node.hasAttribute('contenteditable')) {
-                      shouldReapply = true;
-                    }
-                    if (node.querySelectorAll) {
-                      const inputs = node.querySelectorAll('input, textarea, select, [contenteditable]');
-                      if (inputs.length > 0) {
-                        shouldReapply = true;
-                      }
-                    }
-                  }
-                });
-              });
-              
-              if (shouldReapply) {
-                setTimeout(() => {
-                  removeExistingListeners();
-                  addFocusHandlers();
-                }, 100);
+            // Close button
+            const closeBtn = document.createElement('button');
+            closeBtn.innerHTML = '×';
+            closeBtn.style.cssText = minimizeBtn.style.cssText;
+            closeBtn.onmouseover = () => {
+              closeBtn.style.background = 'rgba(239, 68, 68, 0.8)';
+              closeBtn.style.color = 'white';
+            };
+            closeBtn.onmouseout = () => {
+              closeBtn.style.background = 'transparent';
+              closeBtn.style.color = '#d1d5db';
+            };
+            closeBtn.onclick = () => {
+              if (window.electronAPI) {
+                window.electronAPI.closeWindow();
               }
-            });
+            };
             
-            observer.observe(document.body, {
-              childList: true,
-              subtree: true
-            });
+            // Add buttons to container
+            controlsContainer.appendChild(minimizeBtn);
+            controlsContainer.appendChild(maximizeBtn);
+            controlsContainer.appendChild(closeBtn);
             
-            // Handle window focus events
-            window.addEventListener('focus', function() {
-              setTimeout(() => {
-                if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'SELECT')) {
-                  document.activeElement.focus();
-                }
-              }, 50);
-            });
+            // Add to page
+            document.body.appendChild(controlsContainer);
             
-            // Prevent form interference
-            document.addEventListener('click', function(e) {
-              if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
-                e.stopPropagation();
-              }
-            }, true);
-            
-            console.log('Focus management script injected successfully');
+            console.log('Window controls added successfully');
           })();
         `;
         
-        mainWindow.webContents.executeJavaScript(focusScript);
-        
-        // Show window when ready
-        mainWindow.once('ready-to-show', () => {
-          mainWindow.show();
-          mainWindow.focus();
-        });
-        
-        // Open DevTools in development
-        if (isDev) {
-          mainWindow.webContents.openDevTools();
-        }
-        
+        mainWindow.webContents.executeJavaScript(windowControlsScript);
       } catch (error) {
-        console.error('Error injecting focus script:', error);
+        console.error('Error adding window controls:', error);
       }
     });
+
+    // Show window when ready
+    mainWindow.once('ready-to-show', () => {
+      mainWindow.show();
+      mainWindow.focus();
+    });
+    
+    // Open DevTools in development
+    if (isDev) {
+      mainWindow.webContents.openDevTools();
+    }
     
   } catch (error) {
     console.error('Error creating window:', error);

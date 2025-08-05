@@ -29,21 +29,13 @@ body {
 
 /* Ensure smooth form focus behavior */
 input, textarea, select {
-  outline: none !important;
-  transition: all 0.2s ease !important;
-  /* Force proper focus behavior */
-  -webkit-user-select: text !important;
-  user-select: text !important;
-  /* Prevent focus stealing */
-  -webkit-appearance: none !important;
-  appearance: none !important;
+  outline: none;
+  transition: all 0.2s ease;
 }
 
 input:focus, textarea:focus, select:focus {
-  outline: 2px solid #3b82f6 !important;
-  outline-offset: 2px !important;
-  /* Ensure focus is visible */
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
 }
 
 /* Prevent any interference with form elements */
@@ -54,54 +46,4 @@ input:focus, textarea:focus, select:focus {
 /* Ensure proper z-index for modals and dropdowns */
 .modal, .dropdown, .popup {
   z-index: 1000;
-}
-
-/* Additional focus fixes for remote app */
-input[type="text"], 
-input[type="email"], 
-input[type="password"], 
-input[type="number"], 
-input[type="tel"], 
-input[type="url"], 
-input[type="search"], 
-textarea, 
-select {
-  /* Force proper cursor behavior */
-  cursor: text !important;
-  /* Prevent focus loss */
-  -webkit-user-modify: read-write !important;
-  user-modify: read-write !important;
-  /* Ensure proper input behavior */
-  -webkit-text-fill-color: inherit !important;
-  color: inherit !important;
-}
-
-/* Fix for contenteditable elements */
-[contenteditable="true"] {
-  outline: none !important;
-  cursor: text !important;
-}
-
-[contenteditable="true"]:focus {
-  outline: 2px solid #3b82f6 !important;
-  outline-offset: 2px !important;
-}
-
-/* Prevent any global click handlers from interfering */
-body * {
-  pointer-events: auto !important;
-}
-
-/* Ensure form elements are always interactive */
-form * {
-  pointer-events: auto !important;
-}
-
-/* Fix for any overlay elements that might interfere */
-.overlay, .modal-backdrop, .backdrop {
-  pointer-events: none !important;
-}
-
-.overlay *, .modal-backdrop *, .backdrop * {
-  pointer-events: auto !important;
 }
