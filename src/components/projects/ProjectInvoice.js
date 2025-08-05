@@ -26,6 +26,7 @@ import {
 import toast from 'react-hot-toast';
 import InvoiceGenerator from '../invoice/InvoiceGenerator';
 import CompanyLogo from '../common/CompanyLogo';
+import BillingExcelInterface from './BillingExcelInterface';
 
 const ProjectInvoice = ({ project }) => {
   const navigate = useNavigate();
@@ -387,35 +388,65 @@ const ProjectInvoice = ({ project }) => {
         )}
       </div>
 
-      {/* Billing Items */}
-      <div className="bg-white rounded-lg border">
-        <div className="p-4 border-b">
-          <h3 className="font-semibold text-gray-900">Billing Items</h3>
-          <p className="text-sm text-gray-600">Manage individual billing items for this project</p>
-        </div>
-        
-        <div className="p-4">
-          {(project.billingItems?.length || 0) === 0 ? (
-            <div className="text-center py-8">
-              <Receipt size={48} className="mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No billing items</h3>
-              <p className="text-gray-600">Add billing items to start tracking project costs</p>
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {project.billingItems?.map(item => (
-                <BillingItemCard key={item.id} item={item} />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Excel-like Billing Interface */}
+      <BillingExcelInterface 
+        project={project} 
+        onUpdate={async (itemId, updates, isNew = false, isDelete = false) => {
+          try {
+            console.log('📞 onUpdate called:', { 
+              itemId, 
+              itemIdType: typeof itemId, 
+              updates, 
+              isNew, 
+              isDelete 
+            });
+            
+            if (isDelete) {
+              console.log('🗑️ Deleting billing item:', itemId, 'type:', typeof itemId);
+              const result = await deleteBillingItem(project.id, itemId);
+              console.log('Delete result:', result);
+              
+              if (!result.success) {
+                throw new Error(result.error || 'Failed to delete billing item');
+              }
+              
+              // Reload projects after successful deletion
+              await loadProjects();
+              return { success: true }; // Return success result for deletion
+            } else if (isNew) {
+              console.log('Adding new billing item:', updates);
+              const result = await addBillingItem(project.id, updates);
+              console.log('Add result:', result);
+              
+              if (!result.success) {
+                throw new Error(result.error || 'Failed to add billing item');
+              }
+              
+              // Reload projects after successful addition
+              await loadProjects();
+              return result.billingItem; // Return the saved item with ID
+            } else {
+              console.log('Updating billing item:', { itemId, updates });
+              const result = await updateBillingItem(project.id, itemId, updates);
+              console.log('Update result:', result);
+              
+              // Reload projects after successful update
+              await loadProjects();
+              return result.billingItem; // Return updated item
+            }
+          } catch (error) {
+            console.error('Error updating billing item:', error);
+            toast.error('Failed to update billing item');
+            throw error;
+          }
+        }}
+      />
 
       {/* Invoice Generator Modal */}
       {isInvoiceModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-7xl h-[95vh] overflow-hidden shadow-2xl">
-            <div className="bg-black text-white p-6 flex items-center justify-between">
+          <div className="bg-white rounded-lg w-full max-w-7xl shadow-2xl flex flex-col" style={{ maxHeight: '95vh' }}>
+            <div className="bg-black text-white p-6 flex items-center justify-between flex-shrink-0">
               <div className="flex items-center space-x-3">
                 <FileText size={24} className="text-yellow-400" />
                 <h3 className="text-xl font-semibold">Invoice Generator</h3>
@@ -427,7 +458,7 @@ const ProjectInvoice = ({ project }) => {
                 ✕
               </button>
             </div>
-            <div className="h-full overflow-y-auto bg-gray-50">
+            <div className="flex-1 overflow-y-auto bg-gray-50">
               <div className="p-6">
                 <InvoiceGenerator project={project} discount={discount} />
               </div>

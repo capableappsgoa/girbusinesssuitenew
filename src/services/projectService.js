@@ -72,6 +72,8 @@ export const fetchProjects = async () => {
           // Fetch company information if project has a company_id
           let company = null;
           if (project.company_id) {
+            console.log('🏢 Fetching company for project:', project.id, 'company_id:', project.company_id);
+            
             const { data: companyData, error: companyError } = await supabase
               .from('companies')
               .select('*')
@@ -79,8 +81,15 @@ export const fetchProjects = async () => {
               .single();
 
             if (companyError) {
-              console.error('Error fetching company for project:', project.id, companyError);
+              console.error('❌ Error fetching company for project:', project.id, companyError);
             } else {
+              console.log('✅ Company data fetched:', {
+                id: companyData.id,
+                name: companyData.name,
+                logo_url: companyData.logo_url,
+                hasLogo: !!companyData.logo_url
+              });
+              
               company = {
                 id: companyData.id,
                 name: companyData.name,
@@ -94,6 +103,8 @@ export const fetchProjects = async () => {
                 logoAltText: companyData.logo_alt_text
               };
             }
+          } else {
+            console.log('⚠️ No company_id found for project:', project.id);
           }
 
           // Map snake_case to camelCase for frontend compatibility
@@ -134,6 +145,10 @@ export const fetchProjects = async () => {
             unitPrice: item.unit_price,
             totalPrice: item.total_price,
             status: item.status,
+            notes: item.notes,
+            paymentDate: item.payment_date,
+            paymentAmount: item.payment_amount,
+            partialPayment: item.partial_payment,
             createdAt: item.created_at,
             updatedAt: item.updated_at
           }));
@@ -361,9 +376,10 @@ export const createBillingItem = async (projectId, billingItemData) => {
     console.log('Creating billing item for project:', projectId);
     console.log('Billing item data:', billingItemData);
     
-    // Ensure we have valid data
-    if (!billingItemData.name || !billingItemData.description) {
-      throw new Error('Name and description are required');
+    // Ensure we have valid data - allow null values for flexibility
+    if ((!billingItemData.name || billingItemData.name.trim() === '') && 
+        (!billingItemData.description || billingItemData.description.trim() === '')) {
+      throw new Error('At least name or description is required');
     }
     
     const quantity = parseInt(billingItemData.quantity) || 1;
@@ -377,7 +393,7 @@ export const createBillingItem = async (projectId, billingItemData) => {
       quantity: quantity,
       unit_price: unitPrice,
       total_price: totalPrice,
-      status: billingItemData.status || 'pending'
+      status: billingItemData.status || 'in-progress'
     };
 
     console.log('Billing item for database:', billingItemForDB);
@@ -426,9 +442,10 @@ export const updateBillingItem = async (billingItemId, updates) => {
     console.log('Updating billing item:', billingItemId);
     console.log('Updates:', updates);
     
-    // Ensure we have valid data
-    if (!updates.name || !updates.description) {
-      throw new Error('Name and description are required');
+    // Ensure we have valid data - allow null values for flexibility
+    if ((!updates.name || updates.name.trim() === '') && 
+        (!updates.description || updates.description.trim() === '')) {
+      throw new Error('At least name or description is required');
     }
     
     const quantity = parseInt(updates.quantity) || 1;
@@ -441,7 +458,7 @@ export const updateBillingItem = async (billingItemId, updates) => {
       quantity: quantity,
       unit_price: unitPrice,
       total_price: totalPrice,
-      status: updates.status || 'pending',
+      status: updates.status || 'in-progress',
       updated_at: new Date().toISOString()
     };
 
@@ -1701,6 +1718,48 @@ export const updateProjectDiscount = async (projectId, discountPercentage) => {
     return data;
   } catch (error) {
     console.error('Failed to update project discount:', error);
+    throw error;
+  }
+}; 
+
+// Fetch company data by ID
+export const fetchCompanyById = async (companyId) => {
+  try {
+    console.log('🏢 Fetching company by ID:', companyId);
+    
+    const { data: companyData, error } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('id', companyId)
+      .single();
+
+    if (error) {
+      console.error('❌ Error fetching company:', error);
+      throw error;
+    }
+
+    console.log('✅ Company fetched:', {
+      id: companyData.id,
+      name: companyData.name,
+      logo_url: companyData.logo_url,
+      hasLogo: !!companyData.logo_url
+    });
+
+    // Map to frontend format
+    return {
+      id: companyData.id,
+      name: companyData.name,
+      email: companyData.email,
+      phone: companyData.phone,
+      address: companyData.address,
+      contactPerson: companyData.contact_person,
+      website: companyData.website,
+      industry: companyData.industry,
+      logoUrl: companyData.logo_url,
+      logoAltText: companyData.logo_alt_text
+    };
+  } catch (error) {
+    console.error('Failed to fetch company:', error);
     throw error;
   }
 }; 

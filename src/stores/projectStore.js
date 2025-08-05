@@ -23,7 +23,8 @@ import {
   deleteCompanyService,
   markProjectAsPaid,
   markProjectAsUnpaid,
-  updateProjectDiscount
+  updateProjectDiscount,
+  fetchCompanyById
 } from '../services/projectService';
 
 const useProjectStore = create(
@@ -820,6 +821,39 @@ const useProjectStore = create(
           console.error('Failed to mark project as unpaid:', error);
           set({ isLoading: false });
           throw error;
+        }
+      },
+
+      // Fetch company data by ID and update project data
+      fetchCompanyAndUpdateProject: async (projectId) => {
+        try {
+          const project = get().getProjectById(projectId);
+          if (!project) {
+            console.error('Project not found for company update:', projectId);
+            return { success: false, error: 'Project not found' };
+          }
+
+          const companyId = project.company_id;
+          if (!companyId) {
+            console.warn('Project has no company_id, cannot fetch company:', projectId);
+            return { success: false, error: 'Project has no company assigned' };
+          }
+
+          const company = await fetchCompanyById(companyId);
+          if (company) {
+            set((state) => ({
+              projects: state.projects.map(p =>
+                p.id === projectId ? { ...p, company: company } : p
+              )
+            }));
+            return { success: true, company };
+          } else {
+            console.error('Failed to fetch company by ID:', companyId);
+            return { success: false, error: 'Failed to fetch company' };
+          }
+        } catch (error) {
+          console.error('Failed to fetch company and update project:', error);
+          return { success: false, error: error.message };
         }
       }
     }),

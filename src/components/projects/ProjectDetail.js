@@ -28,7 +28,7 @@ import CompanyLogo from '../common/CompanyLogo';
 
 const ProjectDetail = () => {
   const { id } = useParams();
-  const { getProjectById, loadProject } = useProjectStore();
+  const { getProjectById, loadProject, fetchCompanyAndUpdateProject } = useProjectStore();
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState('overview');
   const [isLoading, setIsLoading] = useState(false);
@@ -42,7 +42,12 @@ const ProjectDetail = () => {
       projectId: project?.id,
       teamLength: project?.team?.length,
       team: project?.team,
-      hasTeam: !!project?.team
+      hasTeam: !!project?.team,
+      company: project?.company,
+      hasCompany: !!project?.company,
+      companyLogoUrl: project?.company?.logoUrl,
+      companyName: project?.company?.name,
+      companyId: project?.company_id
     });
   }, [project, id]);
 
@@ -54,6 +59,14 @@ const ProjectDetail = () => {
       loadProject(id).finally(() => setIsLoading(false));
     }
   }, [project?.id, project?.team?.length]); // Only depend on project ID and team length to prevent infinite loop
+
+  // Fetch company data if project has company_id but no company data
+  React.useEffect(() => {
+    if (project && project.company_id && !project.company) {
+      console.log('ProjectDetail - Fetching company data for project:', project.id);
+      fetchCompanyAndUpdateProject(project.id);
+    }
+  }, [project?.id, project?.company_id, project?.company]);
 
   if (isLoading) {
     return (
@@ -141,26 +154,7 @@ const ProjectDetail = () => {
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div className="flex items-center space-x-4">
-            {project.companyLogoUrl ? (
-              <div className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200 flex items-center justify-center bg-white">
-                <img 
-                  src={project.companyLogoUrl} 
-                  alt={project.companyLogoAltText || project.company?.name || 'Company Logo'}
-                  className="w-full h-full object-contain"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'flex';
-                  }}
-                />
-                <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center" style={{display: 'none'}}>
-                  <Building2 className="h-8 w-8 text-white" />
-                </div>
-              </div>
-            ) : (
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <Building2 className="h-8 w-8 text-white" />
-              </div>
-            )}
+            <CompanyLogo company={project.company} size="md" />
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
               <p className="text-gray-600">{project.client}</p>
