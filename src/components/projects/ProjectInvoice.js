@@ -239,75 +239,8 @@ const ProjectInvoice = ({ project }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Billing & Invoice</h2>
-          <p className="text-gray-600">Manage project billing items and generate invoices</p>
-        </div>
-        
-        <div className="flex items-center space-x-3">
-          {(user.role === 'admin' || user.role === 'manager') && (
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="btn-primary flex items-center space-x-2"
-            >
-              <Plus size={16} />
-              <span>Add Billing Item</span>
-            </button>
-          )}
-          <button
-            onClick={handleGenerateInvoice}
-            className="btn-secondary flex items-center space-x-2"
-          >
-            <Download size={16} />
-            <span>Generate Invoice</span>
-          </button>
-          <button
-            onClick={async () => {
-              console.log('Manual refresh clicked');
-              await loadProjects();
-              toast.success('Projects refreshed');
-            }}
-            className="btn-secondary flex items-center space-x-2"
-          >
-            <Eye size={16} />
-            <span>Refresh</span>
-          </button>
-        </div>
-      </div>
+      
 
-      {/* Billing Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg border p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Bill Total</p>
-              <p className="text-2xl font-bold text-blue-600">₹{billingTotal.toLocaleString()}</p>
-            </div>
-            <Calculator size={24} className="text-blue-400" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg border p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Completed</p>
-              <p className="text-2xl font-bold text-green-600">₹{completedTotal.toLocaleString()}</p>
-            </div>
-            <CheckCircle size={24} className="text-green-400" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg border p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Remaining</p>
-              <p className="text-2xl font-bold text-orange-600">₹{remainingTotal.toLocaleString()}</p>
-            </div>
-            <Clock size={24} className="text-orange-400" />
-          </div>
-        </div>
-      </div>
 
       {/* Company Information */}
       {project.company && (
@@ -430,9 +363,13 @@ const ProjectInvoice = ({ project }) => {
               const result = await updateBillingItem(project.id, itemId, updates);
               console.log('Update result:', result);
               
+              if (!result.success) {
+                throw new Error(result.error || 'Failed to update billing item');
+              }
+              
               // Reload projects after successful update
               await loadProjects();
-              return result.billingItem; // Return updated item
+              return { success: true, billingItem: result.billingItem }; // Return proper success response
             }
           } catch (error) {
             console.error('Error updating billing item:', error);

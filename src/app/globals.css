@@ -47,3 +47,15 @@ input:focus, textarea:focus, select:focus {
 .modal, .dropdown, .popup {
   z-index: 1000;
 }
+
+/* Hide scrollbars but keep scroll functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Safari and Chrome */
+}
+
+/* Hide scrollbars but keep scroll functionality */

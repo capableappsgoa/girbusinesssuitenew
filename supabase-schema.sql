@@ -57,7 +57,7 @@ CREATE TABLE billing_items (
   quantity INTEGER DEFAULT 1,
   unit_price DECIMAL(12,2) DEFAULT 0,
   total_price DECIMAL(12,2) DEFAULT 0,
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'in-progress', 'completed')),
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'in-progress', 'submitted', 'paid', 'completed')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

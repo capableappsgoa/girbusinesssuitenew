@@ -761,7 +761,14 @@ const ProjectTasks = ({ project }) => {
                   </label>
                   <select
                     value={newTask.billingItemId}
-                    onChange={(e) => setNewTask({ ...newTask, billingItemId: e.target.value })}
+                    onChange={(e) => {
+                      const selectedBillingItem = project.billingItems?.find(item => item.id === e.target.value);
+                      setNewTask({ 
+                        ...newTask, 
+                        billingItemId: e.target.value,
+                        title: selectedBillingItem ? selectedBillingItem.name : newTask.title
+                      });
+                    }}
                     className="input-field"
                   >
                     <option value="">Select billing item</option>
@@ -887,6 +894,45 @@ const ProjectTasks = ({ project }) => {
                     max="100"
                     value={selectedTask.progress}
                     onChange={(e) => setSelectedTask({ ...selectedTask, progress: parseInt(e.target.value) })}
+                    className="input-field"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Billing Item
+                  </label>
+                  <select
+                    value={selectedTask.billingItemId || ''}
+                    onChange={(e) => {
+                      const selectedBillingItem = project.billingItems?.find(item => item.id === e.target.value);
+                      setSelectedTask({ 
+                        ...selectedTask, 
+                        billingItemId: e.target.value,
+                        title: selectedBillingItem ? selectedBillingItem.name : selectedTask.title
+                      });
+                    }}
+                    className="input-field"
+                  >
+                    <option value="">Select billing item</option>
+                    {project.billingItems?.map(item => (
+                      <option key={item.id} value={item.id}>
+                        {item.name} - ₹{item.totalPrice}
+                      </option>
+                    )) || []}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Deadline
+                  </label>
+                  <input
+                    type="date"
+                    value={selectedTask.deadline}
+                    onChange={(e) => setSelectedTask({ ...selectedTask, deadline: e.target.value })}
                     className="input-field"
                   />
                 </div>

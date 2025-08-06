@@ -442,25 +442,24 @@ export const updateBillingItem = async (billingItemId, updates) => {
     console.log('Updating billing item:', billingItemId);
     console.log('Updates:', updates);
     
-    // Ensure we have valid data - allow null values for flexibility
-    if ((!updates.name || updates.name.trim() === '') && 
-        (!updates.description || updates.description.trim() === '')) {
-      throw new Error('At least name or description is required');
+    // Only validate name/description if they are being updated
+    if (updates.name !== undefined && updates.description !== undefined) {
+      if ((!updates.name || updates.name.trim() === '') && 
+          (!updates.description || updates.description.trim() === '')) {
+        throw new Error('At least name or description is required');
+      }
     }
     
-    const quantity = parseInt(updates.quantity) || 1;
-    const unitPrice = parseFloat(updates.unitPrice) || 0;
-    const totalPrice = quantity * unitPrice;
-    
     const updatesForDB = {
-      name: updates.name,
-      description: updates.description,
-      quantity: quantity,
-      unit_price: unitPrice,
-      total_price: totalPrice,
-      status: updates.status || 'in-progress',
       updated_at: new Date().toISOString()
     };
+
+    // Only include fields that are being updated
+    if (updates.name !== undefined) updatesForDB.name = updates.name;
+    if (updates.description !== undefined) updatesForDB.description = updates.description;
+    if (updates.quantity !== undefined) updatesForDB.quantity = parseInt(updates.quantity) || 1;
+    if (updates.unitPrice !== undefined) updatesForDB.unit_price = parseFloat(updates.unitPrice) || 0;
+    if (updates.status !== undefined) updatesForDB.status = updates.status;
 
     console.log('Updates for database:', updatesForDB);
 

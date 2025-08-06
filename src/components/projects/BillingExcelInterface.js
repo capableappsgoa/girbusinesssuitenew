@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useProjectStore } from '../../stores/projectStore';
 import { 
   Plus, 
   Save, 
@@ -20,6 +22,8 @@ import {
 import toast from 'react-hot-toast';
 
 const BillingExcelInterface = ({ project, onUpdate }) => {
+  const navigate = useNavigate();
+  const { setCurrentProject, setInvoiceDiscountPercentage, loadProjects } = useProjectStore();
   const [billingItems, setBillingItems] = useState([]);
   const [selectedItems, setSelectedItems] = useState(new Set());
   const [editingCell, setEditingCell] = useState(null);
@@ -36,6 +40,14 @@ const BillingExcelInterface = ({ project, onUpdate }) => {
       setBillingItems(project.billingItems || []);
     } else {
       setBillingItems([]);
+    }
+  }, [project?.billingItems]);
+
+  // Simple useEffect to refresh billing items when project data changes
+  useEffect(() => {
+    if (project?.billingItems) {
+      console.log('🔄 Refreshing billing items from project data...');
+      setBillingItems(project.billingItems);
     }
   }, [project?.billingItems]);
 
@@ -72,6 +84,9 @@ const BillingExcelInterface = ({ project, onUpdate }) => {
 
   const handleCellSave = async (itemId, field, value) => {
     try {
+      // Store original state for potential revert
+      const originalItems = [...billingItems];
+      
       const updatedItems = billingItems.map(item => {
         if (item.id === itemId) {
           const updatedItem = { ...item, [field]: value };
@@ -94,8 +109,21 @@ const BillingExcelInterface = ({ project, onUpdate }) => {
 
       // Auto-save if enabled
       if (autoSaveEnabled) {
-        await onUpdate(itemId, { [field]: value });
-        toast.success('Auto-saved');
+        try {
+          const result = await onUpdate(itemId, { [field]: value });
+          if (result && result.success) {
+            toast.success('Auto-saved');
+          } else {
+            toast.error('Failed to save changes');
+            // Revert local changes on failure
+            setBillingItems(originalItems);
+          }
+        } catch (error) {
+          console.error('Error saving item:', error);
+          toast.error('Failed to save changes');
+          // Revert local changes on error
+          setBillingItems(originalItems);
+        }
       }
     } catch (error) {
       console.error('Error updating item:', error);
@@ -124,9 +152,16 @@ const BillingExcelInterface = ({ project, onUpdate }) => {
       const updatePromises = Array.from(selectedItems).map(itemId =>
         onUpdate(itemId, { status: newStatus })
       );
-      await Promise.all(updatePromises);
-
-      toast.success(`${selectedItems.size} items marked as ${newStatus}`);
+      const results = await Promise.all(updatePromises);
+      
+      // Check if all updates were successful
+      const allSuccessful = results.every(result => result && result.success);
+      
+      if (allSuccessful) {
+        toast.success(`${selectedItems.size} items marked as ${newStatus}`);
+      } else {
+        toast.error('Some items failed to update');
+      }
     } catch (error) {
       console.error('Error updating items:', error);
       toast.error('Failed to update items');
@@ -371,6 +406,13 @@ const BillingExcelInterface = ({ project, onUpdate }) => {
     return totals;
   };
 
+  const handleGenerateInvoice = () => {
+    // Set the current project and navigate to the invoice page
+    setCurrentProject(project);
+    setInvoiceDiscountPercentage(0); // Default discount percentage
+    navigate('/invoice');
+  };
+
   const handlePasteData = (event) => {
     event.preventDefault();
     const clipboardData = event.clipboardData || window.clipboardData;
@@ -409,6 +451,26 @@ const BillingExcelInterface = ({ project, onUpdate }) => {
           <div className="flex items-center space-x-4">
             <h3 className="text-lg font-semibold text-gray-900">Billing Items</h3>
             <div className="flex items-center space-x-2">
+            <button
+            onClick={handleGenerateInvoice}
+            className="btn-secondary flex items-center space-x-2"
+          >
+            <Download size={16} />
+            <span>Generate Invoice</span>
+          </button>
+          <button
+            onClick={() => {
+              console.log('Manual refresh clicked');
+              if (project?.billingItems) {
+                setBillingItems(project.billingItems);
+                toast.success('Billing items refreshed');
+              }
+            }}
+            className="btn-secondary flex items-center space-x-2"
+          >
+            <Eye size={16} />
+            <span>Refresh</span>
+          </button>
               <button
                 onClick={() => handleAddMultipleRows(1)}
                 className="btn-primary flex items-center space-x-2"

@@ -6,6 +6,96 @@ const InvoiceGenerator = ({ project, discount = 0 }) => {
   const [isGenerating, setIsGenerating] = React.useState(false);
   const invoiceRef = useRef(null);
 
+  const captureFullScreenshot = async () => {
+    if (!invoiceRef.current) return;
+    
+    setIsGenerating(true);
+    try {
+      // Import html2canvas dynamically
+      const html2canvas = (await import('html2canvas')).default;
+      
+      // Temporarily modify the element for capture
+      const originalOverflow = invoiceRef.current.style.overflow;
+      const originalHeight = invoiceRef.current.style.height;
+      const originalMaxHeight = invoiceRef.current.style.maxHeight;
+      const originalScrollTop = invoiceRef.current.scrollTop;
+      
+      // Set proper dimensions for capture
+      invoiceRef.current.style.overflow = 'scroll';
+      invoiceRef.current.style.height = 'auto';
+      invoiceRef.current.style.maxHeight = 'none';
+      invoiceRef.current.scrollTop = 0; // Ensure we start from the top
+      
+      // Wait for layout to update
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Get the actual content dimensions
+      const rect = invoiceRef.current.getBoundingClientRect();
+      const scrollHeight = invoiceRef.current.scrollHeight;
+      const scrollWidth = invoiceRef.current.scrollWidth;
+      
+      console.log('Capture dimensions:', {
+        rect,
+        scrollHeight,
+        scrollWidth,
+        offsetHeight: invoiceRef.current.offsetHeight,
+        clientHeight: invoiceRef.current.clientHeight
+      });
+      
+      // Configure html2canvas for full capture
+      const canvas = await html2canvas(invoiceRef.current, {
+        allowTaint: true,
+        useCORS: true,
+        scale: 2, // Higher resolution
+        width: scrollWidth,
+        height: scrollHeight,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: scrollWidth,
+        windowHeight: scrollHeight,
+        foreignObjectRendering: true,
+        removeContainer: true,
+        backgroundColor: '#ffffff',
+        logging: true, // Enable logging for debugging
+        onclone: (clonedDoc) => {
+          // Ensure the cloned element has proper dimensions
+          const clonedElement = clonedDoc.querySelector('[data-invoice-content]');
+          if (clonedElement) {
+            clonedElement.style.width = '100%';
+            clonedElement.style.height = 'auto';
+            clonedElement.style.overflow = 'visible';
+            clonedElement.style.position = 'relative';
+            clonedElement.style.maxHeight = 'none';
+            clonedElement.style.minHeight = 'auto';
+            clonedElement.style.display = 'block';
+            clonedElement.style.transform = 'none';
+          }
+        }
+      });
+
+      // Restore original styles
+      invoiceRef.current.style.overflow = originalOverflow;
+      invoiceRef.current.style.height = originalHeight;
+      invoiceRef.current.style.maxHeight = originalMaxHeight;
+      invoiceRef.current.scrollTop = originalScrollTop;
+
+      // Convert to image and download
+      const image = canvas.toDataURL('image/png', 1.0);
+      const link = document.createElement('a');
+      link.href = image;
+      link.download = `invoice-${project?.name || 'project'}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+    } catch (error) {
+      console.error('Screenshot generation failed:', error);
+      alert('Failed to generate screenshot. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const generateInvoice = () => {
     setIsGenerating(true);
     try {
@@ -187,7 +277,7 @@ const InvoiceGenerator = ({ project, discount = 0 }) => {
             .border-t-4 { border-top-width: 4px !important; }
             .border-t-2 { border-top-width: 2px !important; }
             
-            .overflow-hidden { overflow: hidden !important; }
+            
             
             .divide-y > * + * { border-top-width: 1px !important; border-top-color: #e5e7eb !important; }
             
@@ -202,54 +292,17 @@ const InvoiceGenerator = ({ project, discount = 0 }) => {
             .hover\\:bg-yellow-600:hover { background-color: #ca8a04 !important; }
             .hover\\:bg-blue-600:hover { background-color: #2563eb !important; }
             .hover\\:bg-gray-600:hover { background-color: #4b5563 !important; }
-            
-            /* Ensure content fits properly */
-            .invoice-content {
-              height: auto !important;
-              min-height: 100vh !important;
-              box-sizing: border-box;
-            }
-            
-            /* Handle long content */
-            .billing-items-container {
-              height: auto !important;
-              min-height: fit-content !important;
-            }
-            
-            .billing-item-row {
-              min-height: 80px !important;
-              height: auto !important;
-            }
           </style>
         </head>
         <body>
           <div class="print-page">
-            <div class="print-header">
               <button class="print-button no-print" onclick="window.print()">
                 🖨️ Print PDF
               </button>
-              <button class="print-button no-print" onclick="window.close()" style="margin-left: 10px; background: #dc2626;">
-                ❌ Close
-              </button>
-            </div>
-            <div class="invoice-container invoice-content">
+            <div class="invoice-container">
               ${invoiceElement.outerHTML}
             </div>
           </div>
-          
-          <script>
-            // Ensure the window is properly sized for the content
-            window.onload = function() {
-              const container = document.querySelector('.invoice-container');
-              if (container) {
-                const height = container.scrollHeight;
-                console.log('Invoice height:', height);
-                
-                // Set minimum height to ensure all content is visible
-                container.style.minHeight = height + 'px';
-              }
-            };
-          </script>
         </body>
         </html>
       `;
@@ -257,20 +310,8 @@ const InvoiceGenerator = ({ project, discount = 0 }) => {
       printWindow.document.write(htmlContent);
       printWindow.document.close();
       
-      // Focus the new window and wait for content to load
+      // Focus the new window
       printWindow.focus();
-      
-      // Wait for content to load and then adjust window size
-      printWindow.onload = function() {
-        const container = printWindow.document.querySelector('.invoice-container');
-        if (container) {
-          const height = container.scrollHeight;
-          console.log('Final invoice height:', height);
-          
-          // Set window size to accommodate content
-          printWindow.resizeTo(900, Math.min(height + 200, window.screen.height));
-        }
-      };
       
     } catch (error) {
       console.error('Invoice generation failed:', error);
@@ -1251,21 +1292,21 @@ const InvoiceGenerator = ({ project, discount = 0 }) => {
         
         <div className="flex items-center space-x-3">
           <button
+            onClick={captureFullScreenshot}
+            disabled={isGenerating}
+            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-medium px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors duration-200 cursor-pointer"
+          >
+            <FileText size={16} />
+            <span>{isGenerating ? 'Capturing...' : 'Screenshot Invoice'}</span>
+          </button>
+          
+          <button
             onClick={generateInvoice}
             disabled={isGenerating}
             className="bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 text-black font-medium px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors duration-200 cursor-pointer"
           >
             <FileText size={16} />
             <span>{isGenerating ? 'Opening Print...' : 'Print Invoice'}</span>
-          </button>
-          
-          <button
-            onClick={generatePDF}
-            disabled={isGenerating}
-            className="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white font-medium px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors duration-200 cursor-pointer"
-          >
-            <FileText size={16} />
-            <span>{isGenerating ? 'Generating PDF...' : 'Generate PDF'}</span>
           </button>
           
           <button
@@ -1307,7 +1348,7 @@ const InvoiceGenerator = ({ project, discount = 0 }) => {
       </div>
 
       {/* Invoice Preview */}
-      <div ref={invoiceRef} className="bg-white rounded-xl shadow-2xl">
+      <div ref={invoiceRef} data-invoice-content className="bg-white rounded-xl shadow-2xl overflow-y-auto scrollbar-hide" style={{ maxHeight: '80vh' }}>
         {/* Header */}
         <div className="bg-gradient-to-r from-gray-900 to-black text-white p-8">
           <div className="flex items-center justify-between">
@@ -1458,9 +1499,9 @@ const InvoiceGenerator = ({ project, discount = 0 }) => {
                 </div>
               </div>
               
-              <div className="divide-y divide-gray-200 billing-items-container">
+              <div className="divide-y divide-gray-200">
                 {project?.billingItems?.map((item, index) => (
-                  <div key={item.id || index} className="px-8 py-6 hover:bg-gray-50 transition-colors billing-item-row">
+                  <div key={item.id || index} className="px-8 py-6 hover:bg-gray-50 transition-colors">
                     <div className="grid grid-cols-12 gap-6">
                       <div className="col-span-4 font-bold text-lg text-gray-900">{item.name}</div>
                       <div className="col-span-4 text-gray-700">{item.description}</div>

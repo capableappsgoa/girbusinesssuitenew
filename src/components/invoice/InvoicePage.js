@@ -302,7 +302,10 @@ const InvoicePage = () => {
   };
 
   const captureInvoiceAsImage = async (format = 'png', preview = false) => {
-    if (!invoiceRef.current) return;
+    if (!invoiceRef.current) {
+      console.error('Invoice ref not found');
+      return;
+    }
     
     try {
       setCapturing(true);
@@ -310,18 +313,160 @@ const InvoicePage = () => {
       // Wait for any images to load
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      const canvas = await html2canvas(invoiceRef.current, {
-        scale: 2, // Higher quality
-        useCORS: true, // Allow cross-origin images
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        width: 210 * 3.779527559, // A4 width in pixels (210mm)
-        height: 297 * 3.779527559, // A4 height in pixels (297mm)
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: 210 * 3.779527559,
-        windowHeight: 297 * 3.779527559
+      // Get the actual content dimensions
+      const rect = invoiceRef.current.getBoundingClientRect();
+      const scrollHeight = invoiceRef.current.scrollHeight;
+      const scrollWidth = invoiceRef.current.scrollWidth;
+      
+      console.log('InvoicePage capture dimensions:', {
+        rect,
+        scrollHeight,
+        scrollWidth,
+        offsetHeight: invoiceRef.current.offsetHeight,
+        clientHeight: invoiceRef.current.clientHeight,
+        element: invoiceRef.current,
+        elementClasses: invoiceRef.current.className
       });
+      
+      // Ensure the element is visible and has content
+      if (scrollHeight === 0 || scrollWidth === 0) {
+        console.error('Element has no content dimensions');
+        alert('Invoice content not found. Please try again.');
+        return;
+      }
+      
+             // Add a delay to ensure all styles are loaded
+       await new Promise(resolve => setTimeout(resolve, 1000));
+       
+       // Debug: Log the element we're trying to capture
+       console.log('Element to capture:', invoiceRef.current);
+       console.log('Element HTML:', invoiceRef.current.outerHTML);
+       console.log('Element dimensions:', {
+         offsetWidth: invoiceRef.current.offsetWidth,
+         offsetHeight: invoiceRef.current.offsetHeight,
+         scrollWidth: invoiceRef.current.scrollWidth,
+         scrollHeight: invoiceRef.current.scrollHeight,
+         clientWidth: invoiceRef.current.clientWidth,
+         clientHeight: invoiceRef.current.clientHeight
+       });
+       
+               // Try a simpler capture approach
+        const canvas = await html2canvas(invoiceRef.current, {
+          scale: 2, // Higher quality for better text rendering
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          logging: true,
+          ignoreElements: (element) => {
+            return element.classList.contains('print-hidden');
+          },
+                    onclone: (clonedDoc) => {
+            console.log('Starting onclone process...');
+            
+            // The cloned element IS the data-invoice-content element
+            const clonedElement = clonedDoc.querySelector('.a4-container');
+            if (clonedElement) {
+              console.log('Found cloned element:', clonedElement);
+              
+              // Set basic styles to ensure visibility
+              clonedElement.style.backgroundColor = '#ffffff';
+              clonedElement.style.display = 'block';
+              clonedElement.style.visibility = 'visible';
+              
+              // CRITICAL: Force table layout to be preserved
+              const tables = clonedElement.querySelectorAll('table');
+              tables.forEach(table => {
+                table.style.display = 'table';
+                table.style.borderCollapse = 'collapse';
+                table.style.width = '100%';
+                table.style.tableLayout = 'fixed';
+                table.style.border = '1px solid #e5e7eb';
+              });
+              
+              // CRITICAL: Force table rows to be horizontal
+              const tableRows = clonedElement.querySelectorAll('tr');
+              tableRows.forEach((row, index) => {
+                row.style.display = 'table-row';
+                row.style.width = '100%';
+                
+                if (index > 0) { // Skip header row
+                  row.style.background = index % 2 === 0 ? '#ffffff' : '#f8f8f8';
+                }
+              });
+              
+              // CRITICAL: Force table cells to be horizontal
+              const tableCells = clonedElement.querySelectorAll('td, th');
+              tableCells.forEach(cell => {
+                cell.style.display = 'table-cell';
+                cell.style.padding = '0.75rem 1rem';
+                cell.style.border = '1px solid #e5e7eb';
+                cell.style.textAlign = cell.classList.contains('text-right') ? 'right' : 'left';
+                cell.style.verticalAlign = 'top';
+                cell.style.width = cell.classList.contains('text-left') ? '40%' : '20%';
+              });
+              
+              // Apply GIR theme styles
+              const girHeaders = clonedElement.querySelectorAll('.gir-header');
+              girHeaders.forEach(header => {
+                header.style.background = 'linear-gradient(135deg, #000000 0%, #1a1a1a 100%)';
+                header.style.color = '#FFD700';
+                header.style.padding = '2rem';
+                header.style.borderRadius = '8px 8px 0 0';
+              });
+              
+              const girLogos = clonedElement.querySelectorAll('.gir-logo');
+              girLogos.forEach(logo => {
+                logo.style.width = '60px';
+                logo.style.height = '60px';
+                logo.style.objectFit = 'contain';
+                logo.style.marginRight = '1rem';
+              });
+              
+              const girAccents = clonedElement.querySelectorAll('.gir-accent');
+              girAccents.forEach(accent => {
+                accent.style.background = '#FFD700';
+                accent.style.color = '#000000';
+                accent.style.padding = '0.5rem 1rem';
+                accent.style.borderRadius = '4px';
+                accent.style.fontWeight = 'bold';
+              });
+              
+              const girTableHeaders = clonedElement.querySelectorAll('.gir-table-header');
+              girTableHeaders.forEach(header => {
+                header.style.background = '#000000';
+                header.style.color = '#FFD700';
+              });
+              
+              const girTotalSections = clonedElement.querySelectorAll('.gir-total-section');
+              girTotalSections.forEach(section => {
+                section.style.background = '#000000';
+                section.style.color = '#FFD700';
+                section.style.padding = '1rem';
+                section.style.borderRadius = '4px';
+              });
+              
+              const girFooters = clonedElement.querySelectorAll('.gir-footer');
+              girFooters.forEach(footer => {
+                footer.style.background = 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)';
+                footer.style.color = '#000000';
+                footer.style.padding = '1rem';
+                footer.style.borderRadius = '0 0 8px 8px';
+              });
+              
+              // Fix footer grid layout
+              const footerGrids = clonedElement.querySelectorAll('.gir-footer .grid');
+              footerGrids.forEach(grid => {
+                grid.style.display = 'grid';
+                grid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+                grid.style.gap = '1.5rem';
+              });
+              
+              console.log('All styles applied to cloned element');
+            } else {
+              console.error('Cloned element not found');
+            }
+          }
+        });
       
              if (preview) {
          // Show preview
@@ -512,35 +657,47 @@ const InvoicePage = () => {
          </div>
        )}
 
-                    {/* A4 Invoice Container */}
-        <div className="a4-container" ref={invoiceRef}>
-         <div className="p-8 print:p-0">
-           {/* GIR Header */}
-           <div className="gir-header mb-8">
-             <div className="flex justify-between items-start">
-               <div className="flex items-center space-x-4">
-                 <img 
-                   src="https://i.ibb.co/0RLKgHD6/GIR-2.png" 
-                   alt="GIR Logo" 
-                   className="gir-logo"
-                 />
-                 <div>
-                   <h1 className="text-4xl font-bold mb-2">GET IT RENDERED</h1>
-                   <p className="text-lg opacity-90">Professional Project Management</p>
+                                                                                   {/* A4 Invoice Container */}
+          <div className="a4-container" ref={invoiceRef} data-invoice-content>
+           <div className="p-8 print:p-0">
+                       {/* GIR Header */}
+            <div className="gir-header mb-8" style={{
+              background: 'linear-gradient(135deg, #000000 0%, #1a1a1a 100%)',
+              color: '#FFD700',
+              padding: '2rem',
+              borderRadius: '8px 8px 0 0'
+            }}>
+              <div className="flex justify-between items-start">
+                                 <div className="flex items-center space-x-6">
+                   <img 
+                     src="https://i.ibb.co/0RLKgHD6/GIR-2.png" 
+                     alt="GIR Logo" 
+                     className="gir-logo"
+                     style={{ width: '60px', height: '60px', objectFit: 'contain', marginRight: '1rem' }}
+                   />
+                   <div style={{ marginLeft: '1rem' }}>
+                     <h1 className="text-4xl font-bold mb-2" style={{ color: '#FFD700' }}>GET IT RENDERED</h1>
+                     <p className="text-lg opacity-90" style={{ color: '#FFD700' }}>Professional Project Management</p>
+                   </div>
                  </div>
-               </div>
-               <div className="text-right">
-                 <div className="gir-accent mb-2">
-                   INVOICE
-                 </div>
-                 <div className="text-sm opacity-90">
-                   <p><strong>Invoice #:</strong> {invoiceData.invoiceNumber}</p>
-                   <p><strong>Date:</strong> {invoiceData.invoiceDate}</p>
-                   <p><strong>Due Date:</strong> {invoiceData.dueDate}</p>
-                 </div>
-               </div>
-             </div>
-           </div>
+                <div className="text-right">
+                  <div className="gir-accent mb-2" style={{
+                    background: '#FFD700',
+                    color: '#000000',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '4px',
+                    fontWeight: 'bold'
+                  }}>
+                    INVOICE
+                  </div>
+                  <div className="text-sm opacity-90" style={{ color: '#FFD700' }}>
+                    <p><strong>Invoice #:</strong> {invoiceData.invoiceNumber}</p>
+                    <p><strong>Date:</strong> {invoiceData.invoiceDate}</p>
+                    <p><strong>Due Date:</strong> {invoiceData.dueDate}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
 
                      {/* Bill To Section */}
            <div className="mb-8 p-6 bg-gray-50 rounded-lg border-l-4 border-yellow-500">
@@ -562,15 +719,23 @@ const InvoicePage = () => {
                Services & Items
              </h3>
              <div className="overflow-hidden rounded-lg border border-gray-200">
-               <table className="w-full border-collapse">
-                 <thead>
-                   <tr className="gir-table-header">
-                     <th className="text-left py-4 px-6 font-semibold">Description</th>
-                     <th className="text-right py-4 px-6 font-semibold">Quantity</th>
-                     <th className="text-right py-4 px-6 font-semibold">Unit Price</th>
-                     <th className="text-right py-4 px-6 font-semibold">Amount</th>
-                   </tr>
-                 </thead>
+                               <table className="w-full border-collapse" style={{ 
+                  tableLayout: 'fixed',
+                  borderCollapse: 'collapse',
+                  width: '100%',
+                  border: '1px solid #e5e7eb'
+                }}>
+                                    <thead>
+                     <tr className="gir-table-header" style={{
+                       background: '#000000',
+                       color: '#FFD700'
+                     }}>
+                                                                       <th className="text-left py-4 px-6 font-semibold" style={{ color: '#FFD700', background: '#000000', width: '40%', border: '1px solid #e5e7eb' }}>Description</th>
+                         <th className="text-right py-4 px-6 font-semibold" style={{ color: '#FFD700', background: '#000000', width: '20%', border: '1px solid #e5e7eb' }}>Quantity</th>
+                         <th className="text-right py-4 px-6 font-semibold" style={{ color: '#FFD700', background: '#000000', width: '20%', border: '1px solid #e5e7eb' }}>Unit Price</th>
+                         <th className="text-right py-4 px-6 font-semibold" style={{ color: '#FFD700', background: '#000000', width: '20%', border: '1px solid #e5e7eb' }}>Amount</th>
+                     </tr>
+                   </thead>
                  <tbody>
                    {invoiceData.billingItems.map((item, index) => {
                      const unitPrice = parseFloat(item.unitPrice) || 0;
@@ -578,12 +743,15 @@ const InvoicePage = () => {
                      const amount = unitPrice * quantity;
                      
                      return (
-                       <tr key={item.id || index} className="gir-table-row border-b border-gray-200">
-                         <td className="py-4 px-6 text-sm text-gray-700">{item.name || 'Unnamed Item'}</td>
-                         <td className="py-4 px-6 text-sm text-gray-700 text-right">{quantity}</td>
-                         <td className="py-4 px-6 text-sm text-gray-700 text-right">${unitPrice.toFixed(2)}</td>
-                         <td className="py-4 px-6 text-sm text-gray-700 text-right font-semibold">${amount.toFixed(2)}</td>
-                       </tr>
+                                               <tr key={item.id || index} className="gir-table-row border-b border-gray-200" style={{ 
+                          background: index % 2 === 0 ? '#ffffff' : '#f8f8f8',
+                          borderBottom: '1px solid #e5e7eb'
+                        }}>
+                                                                                <td className="py-4 px-6 text-sm text-gray-700" style={{ width: '40%', border: '1px solid #e5e7eb' }}>{item.name || 'Unnamed Item'}</td>
+                            <td className="py-4 px-6 text-sm text-gray-700 text-right" style={{ width: '20%', border: '1px solid #e5e7eb' }}>{quantity}</td>
+                            <td className="py-4 px-6 text-sm text-gray-700 text-right" style={{ width: '20%', border: '1px solid #e5e7eb' }}>${unitPrice.toFixed(2)}</td>
+                            <td className="py-4 px-6 text-sm text-gray-700 text-right font-semibold" style={{ width: '20%', border: '1px solid #e5e7eb' }}>${amount.toFixed(2)}</td>
+                        </tr>
                      );
                    })}
                  </tbody>
@@ -593,54 +761,64 @@ const InvoicePage = () => {
 
                      {/* Totals */}
            <div className="flex justify-end mb-8">
-             <div className="w-80">
-               <div className="gir-total-section rounded-lg">
-                                   <div className="flex justify-between py-3 border-b border-yellow-400">
-                    <span className="text-sm font-medium">Subtotal:</span>
-                    <span className="text-sm font-medium">${invoiceData.subtotal.toFixed(2)}</span>
-                  </div>
-                  {invoiceData.discountPercentage > 0 && (
-                    <div className="flex justify-between py-3 border-b border-yellow-400">
-                      <span className="text-sm font-medium">Discount ({invoiceData.discountPercentage}%):</span>
-                      <span className="text-sm font-medium">-${invoiceData.discountAmount.toFixed(2)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between py-4">
-                    <span className="text-xl font-bold">Total:</span>
-                    <span className="text-xl font-bold">${invoiceData.total.toFixed(2)}</span>
-                  </div>
-               </div>
-             </div>
+                           <div className="w-80">
+                <div className="gir-total-section rounded-lg" style={{
+                  background: '#000000',
+                  color: '#FFD700',
+                  padding: '1rem',
+                  borderRadius: '4px'
+                }}>
+                                    <div className="flex justify-between py-3 border-b border-yellow-400">
+                     <span className="text-sm font-medium" style={{ color: '#FFD700' }}>Subtotal:</span>
+                     <span className="text-sm font-medium" style={{ color: '#FFD700' }}>${invoiceData.subtotal.toFixed(2)}</span>
+                   </div>
+                   {invoiceData.discountPercentage > 0 && (
+                     <div className="flex justify-between py-3 border-b border-yellow-400">
+                       <span className="text-sm font-medium" style={{ color: '#FFD700' }}>Discount ({invoiceData.discountPercentage}%):</span>
+                       <span className="text-sm font-medium" style={{ color: '#FFD700' }}>-${invoiceData.discountAmount.toFixed(2)}</span>
+                     </div>
+                   )}
+                   <div className="flex justify-between py-4">
+                     <span className="text-xl font-bold" style={{ color: '#FFD700' }}>Total:</span>
+                     <span className="text-xl font-bold" style={{ color: '#FFD700' }}>${invoiceData.total.toFixed(2)}</span>
+                   </div>
+                </div>
+              </div>
            </div>
 
-                     {/* Footer */}
-           <div className="gir-footer">
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               <div>
-                 <h4 className="font-bold mb-2">Payment Information</h4>
-                 <div className="text-sm">
-                   <p><strong>Payment Terms:</strong> Net 30 days</p>
-                   <p><strong>Payment Method:</strong> Bank Transfer / Check</p>
-                   <p><strong>Due Date:</strong> {invoiceData.dueDate}</p>
-                 </div>
-               </div>
-               <div>
-                 <h4 className="font-bold mb-2">Contact Information</h4>
-                 <div className="text-sm">
-                   <p><strong>GET IT RENDERED</strong></p>
-                   <p>Professional Project Management</p>
-                   <p>Email: info@gir.com</p>
-                   <p>Phone: +1 (555) 123-4567</p>
-                 </div>
-               </div>
-             </div>
-             <div className="mt-6 pt-4 border-t border-yellow-300">
-               <p className="text-sm text-center">
-                 <strong>Thank you for choosing GET IT RENDERED!</strong><br/>
-                 Please include the invoice number ({invoiceData.invoiceNumber}) with your payment.
-               </p>
-             </div>
-           </div>
+                                 {/* Footer */}
+            <div className="gir-footer" style={{
+              background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+              color: '#000000',
+              padding: '1rem',
+              borderRadius: '0 0 8px 8px'
+            }}>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem' }}>
+                <div>
+                  <h4 className="font-bold mb-2" style={{ color: '#000000' }}>Payment Information</h4>
+                  <div className="text-sm" style={{ color: '#000000' }}>
+                    <p><strong>Payment Terms:</strong> Net 30 days</p>
+                    <p><strong>Payment Method:</strong> Bank Transfer / Check</p>
+                    <p><strong>Due Date:</strong> {invoiceData.dueDate}</p>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-bold mb-2" style={{ color: '#000000' }}>Contact Information</h4>
+                  <div className="text-sm" style={{ color: '#000000' }}>
+                    <p><strong>GET IT RENDERED</strong></p>
+                    <p>Professional Project Management</p>
+                    <p>Email: info@gir.com</p>
+                    <p>Phone: +1 (555) 123-4567</p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-6 pt-4 border-t border-yellow-300">
+                <p className="text-sm text-center" style={{ color: '#000000' }}>
+                  <strong>Thank you for choosing GET IT RENDERED!</strong><br/>
+                  Please include the invoice number ({invoiceData.invoiceNumber}) with your payment.
+                </p>
+              </div>
+            </div>
                  </div>
        </div>
        

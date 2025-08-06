@@ -158,9 +158,7 @@ const ProjectDetail = () => {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
               <p className="text-gray-600">{project.client}</p>
-              {project.company && (
-                <p className="text-sm text-gray-500">{project.company.name}</p>
-              )}
+              
             </div>
           </div>
         </div>
