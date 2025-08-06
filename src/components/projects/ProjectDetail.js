@@ -11,9 +11,7 @@ import {
   AlertTriangle,
   CheckCircle,
   XCircle,
-  MessageSquare,
   FileText,
-  Upload,
   Download,
   Building2
 } from 'lucide-react';
@@ -21,8 +19,7 @@ import { format } from 'date-fns';
 import ProjectOverview from './ProjectOverview';
 import ProjectTasks from './ProjectTasks';
 import ProjectIssues from './ProjectIssues';
-import ProjectChat from './ProjectChat';
-import ProjectFiles from './ProjectFiles';
+
 import ProjectInvoice from './ProjectInvoice';
 import CompanyLogo from '../common/CompanyLogo';
 
@@ -94,8 +91,6 @@ const ProjectDetail = () => {
     { id: 'overview', name: 'Overview', icon: FileText },
     { id: 'tasks', name: 'Tasks', icon: CheckCircle },
     { id: 'issues', name: 'Issues', icon: AlertTriangle },
-    { id: 'chat', name: 'Chat', icon: MessageSquare },
-    { id: 'files', name: 'Files', icon: Upload },
     { id: 'invoice', name: 'Invoice', icon: Download }
   ];
 
@@ -131,10 +126,6 @@ const ProjectDetail = () => {
         return <ProjectTasks project={project} />;
       case 'issues':
         return <ProjectIssues project={project} />;
-      case 'chat':
-        return <ProjectChat project={project} />;
-      case 'files':
-        return <ProjectFiles project={project} />;
       case 'invoice':
         return <ProjectInvoice project={project} />;
       default:

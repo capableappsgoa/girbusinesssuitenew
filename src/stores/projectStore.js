@@ -578,37 +578,7 @@ const useProjectStore = create(
         }));
       },
 
-      addFile: (projectId, fileData) => {
-        const newFile = {
-          id: `f${uuidv4()}`,
-          ...fileData,
-          uploadedAt: new Date().toISOString()
-        };
 
-        set((state) => ({
-          projects: state.projects.map(project =>
-            project.id === projectId
-              ? { ...project, files: [...(project.files || []), newFile] }
-              : project
-          )
-        }));
-      },
-
-      addChatMessage: (projectId, messageData) => {
-        const newMessage = {
-          id: `msg${uuidv4()}`,
-          ...messageData,
-          timestamp: new Date().toISOString()
-        };
-
-        set((state) => ({
-          projects: state.projects.map(project =>
-            project.id === projectId
-              ? { ...project, chat: [...(project.chat || []), newMessage] }
-              : project
-          )
-        }));
-      },
 
       // Getters
       getProjectById: (projectId) => {
@@ -622,9 +592,7 @@ const useProjectStore = create(
             team: project.team || [],
             tasks: project.tasks || [],
             issues: project.issues || [],
-            billingItems: project.billingItems || [],
-            chat: project.chat || [],
-            files: project.files || []
+            billingItems: project.billingItems || []
           };
         }
         

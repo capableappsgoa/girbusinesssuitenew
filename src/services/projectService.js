@@ -171,9 +171,7 @@ export const fetchProjects = async () => {
             team: mappedTeamMembers,
             company: company,
             companyLogoUrl: company?.logoUrl || null,
-            companyLogoAltText: company?.logoAltText || null,
-            chat: [], // Placeholder for chat messages
-            files: [] // Placeholder for files
+            companyLogoAltText: company?.logoAltText || null
           };
         } catch (error) {
           console.error('Error fetching related data for project:', project.id, error);
@@ -183,9 +181,7 @@ export const fetchProjects = async () => {
             issues: [],
             billingItems: [],
             team: [],
-            company: null,
-            chat: [],
-            files: []
+            company: null
           };
         }
       })
@@ -740,9 +736,7 @@ export const fetchProjectById = async (projectId) => {
         tasks: mappedTasks,
         issues: mappedIssues,
         billingItems: mappedBillingItems,
-        team: mappedTeamMembers,
-        chat: [], // Placeholder for chat messages
-        files: [] // Placeholder for files
+        team: mappedTeamMembers
       };
     } catch (error) {
       console.error('Error fetching related data for project:', projectId, error);
@@ -751,9 +745,7 @@ export const fetchProjectById = async (projectId) => {
         tasks: [],
         issues: [],
         billingItems: [],
-        team: [],
-        chat: [],
-        files: []
+        team: []
       };
     }
   } catch (error) {

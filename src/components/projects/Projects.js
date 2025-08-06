@@ -197,15 +197,16 @@ const Projects = () => {
               <option value="completed">Completed</option>
             </select>
 
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="input-field"
-            >
-              <option value="all">All Types</option>
-              <option value="3D">3D Projects</option>
-              <option value="2D">2D Projects</option>
-            </select>
+                         <select
+               value={typeFilter}
+               onChange={(e) => setTypeFilter(e.target.value)}
+               className="input-field"
+             >
+               <option value="all">All Types</option>
+               <option value="both">Both (3D & 2D)</option>
+               <option value="3D">3D Projects</option>
+               <option value="2D">2D Projects</option>
+             </select>
           </div>
         </div>
       </div>
@@ -237,9 +238,11 @@ const Projects = () => {
                   {/* Project Header */}
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center space-x-2">
-                      <div className={`w-3 h-3 rounded-full ${
-                        project.type === '3D' ? 'bg-purple-500' : 'bg-blue-500'
-                      }`} />
+                                             <div className={`w-3 h-3 rounded-full ${
+                         project.type === '3D' ? 'bg-purple-500' : 
+                         project.type === '2D' ? 'bg-blue-500' : 
+                         project.type === 'both' ? 'bg-gradient-to-r from-purple-500 to-blue-500' : 'bg-gray-500'
+                       }`} />
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(project.status)}`}>
                         {project.status}
                       </span>

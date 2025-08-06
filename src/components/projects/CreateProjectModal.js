@@ -64,16 +64,16 @@ const CreateProjectModal = ({ isOpen, onClose }) => {
       console.log('Creating project with data:', data);
       console.log('Billing items:', billingItems);
       
-      const projectData = {
-        name: data.name,
-        type: data.type,
-        client: selectedCompany ? selectedCompany.name : data.client,
-        company_id: data.company_id || null,
-        description: data.description,
-        deadline: data.deadline,
-        status: 'pending'
-        // Remove team and billingItems - they should be stored separately
-      };
+             const projectData = {
+         name: data.name,
+         type: data.type || 'both', // Default to 'both' if not specified
+         client: selectedCompany ? selectedCompany.name : data.client,
+         company_id: data.company_id || null,
+         description: data.description,
+         deadline: data.deadline || new Date().toISOString().split('T')[0], // Default to current date
+         status: 'pending'
+         // Remove team and billingItems - they should be stored separately
+       };
 
       console.log('Final project data:', projectData);
       
@@ -135,6 +135,21 @@ const CreateProjectModal = ({ isOpen, onClose }) => {
         'Print Preparation',
         'Digital Assets'
       ];
+    } else if (projectType === 'both') {
+      return [
+        'Initial Concepts',
+        'Stage Modeling',
+        'Design Development',
+        'Lighting Design',
+        'Client Feedback Integration',
+        'Rendering',
+        'Post Production',
+        'Final Artwork',
+        'Animation',
+        'Print Preparation',
+        'Texturing',
+        'Digital Assets'
+      ];
     }
     return [];
   };
@@ -186,14 +201,15 @@ const CreateProjectModal = ({ isOpen, onClose }) => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Project Type
                   </label>
-                  <select
-                    {...register('type')}
-                    className="input-field"
-                  >
-                    <option value="">Select project type (optional)</option>
-                    <option value="3D">3D Project</option>
-                    <option value="2D">2D Project</option>
-                  </select>
+                                     <select
+                     {...register('type')}
+                     className="input-field"
+                   >
+                     <option value="">Select project type (optional)</option>
+                     <option value="both">Both (3D & 2D)</option>
+                     <option value="3D">3D Project</option>
+                     <option value="2D">2D Project</option>
+                   </select>
                 </div>
               </div>
 

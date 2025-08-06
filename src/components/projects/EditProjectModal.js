@@ -117,14 +117,15 @@ const EditProjectModal = ({ isOpen, onClose, project }) => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Project Type
               </label>
-              <select
-                {...register('type')}
-                className="input-field"
-              >
-                <option value="">Select project type (optional)</option>
-                <option value="3D">3D Project</option>
-                <option value="2D">2D Project</option>
-              </select>
+                             <select
+                 {...register('type')}
+                 className="input-field"
+               >
+                 <option value="">Select project type (optional)</option>
+                 <option value="both">Both (3D & 2D)</option>
+                 <option value="3D">3D Project</option>
+                 <option value="2D">2D Project</option>
+               </select>
             </div>
           </div>
 
