@@ -184,19 +184,16 @@ const CreateProjectModal = ({ isOpen, onClose }) => {
                 {/* Project Type */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Project Type *
+                    Project Type
                   </label>
                   <select
-                    {...register('type', { required: 'Project type is required' })}
+                    {...register('type')}
                     className="input-field"
                   >
-                    <option value="">Select project type</option>
+                    <option value="">Select project type (optional)</option>
                     <option value="3D">3D Project</option>
                     <option value="2D">2D Project</option>
                   </select>
-                  {errors.type && (
-                    <p className="mt-1 text-sm text-red-600">{errors.type.message}</p>
-                  )}
                 </div>
               </div>
 
@@ -230,50 +227,42 @@ const CreateProjectModal = ({ isOpen, onClose }) => {
                 {/* Client (fallback for non-admins or when no company selected) */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Client *
+                    Client
                   </label>
                   <input
                     type="text"
-                    {...register('client', { required: 'Client name is required' })}
+                    {...register('client')}
                     className="input-field"
-                    placeholder="Enter client name"
+                    placeholder="Enter client name (optional)"
                   />
-                  {errors.client && (
-                    <p className="mt-1 text-sm text-red-600">{errors.client.message}</p>
-                  )}
                 </div>
               </div>
 
               {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description *
+                  Description
                 </label>
                 <textarea
-                  {...register('description', { required: 'Description is required' })}
+                  {...register('description')}
                   className="input-field"
                   rows={3}
-                  placeholder="Enter project description"
+                  placeholder="Enter project description (optional)"
                 />
-                {errors.description && (
-                  <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
-                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Deadline */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Deadline *
+                    Deadline
                   </label>
                   <input
                     type="date"
-                    {...register('deadline', { required: 'Deadline is required' })}
+                    {...register('deadline')}
                     className="input-field"
+                    placeholder="Select deadline (optional)"
                   />
-                  {errors.deadline && (
-                    <p className="mt-1 text-sm text-red-600">{errors.deadline.message}</p>
-                  )}
                 </div>
               </div>
 

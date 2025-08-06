@@ -122,11 +122,11 @@ const useProjectStore = create(
             ),
             isLoading: false
           }));
-          return updatedProject;
+          return { success: true, project: updatedProject };
         } catch (error) {
           console.error('Failed to update project:', error);
           set({ isLoading: false });
-          throw error;
+          return { success: false, error: error.message };
         }
       },
 

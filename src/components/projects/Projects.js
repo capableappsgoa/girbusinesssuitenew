@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import CreateProjectModal from './CreateProjectModal';
+import EditProjectModal from './EditProjectModal';
 import CompanyLogo from '../common/CompanyLogo';
 import toast from 'react-hot-toast';
 
@@ -30,6 +31,8 @@ const Projects = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedProject, setSelectedProject] = useState(null);
 
   // Load projects on component mount and clear any old data
   useEffect(() => {
@@ -138,6 +141,11 @@ const Projects = () => {
       console.error('Failed to update paid status:', error);
       toast.error('Failed to update paid status');
     }
+  };
+
+  const handleEditProject = (project) => {
+    setSelectedProject(project);
+    setShowEditModal(true);
   };
 
   return (
@@ -343,8 +351,7 @@ const Projects = () => {
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          // TODO: Add edit functionality
-                          toast.info('Edit functionality coming soon');
+                          handleEditProject(project);
                         }}
                         className="p-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors"
                         title="Edit Project"
@@ -399,6 +406,18 @@ const Projects = () => {
         <CreateProjectModal
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
+        />
+      )}
+
+      {/* Edit Project Modal */}
+      {showEditModal && selectedProject && (
+        <EditProjectModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedProject(null);
+          }}
+          project={selectedProject}
         />
       )}
     </div>
