@@ -119,6 +119,16 @@ const ProjectDetail = () => {
     }
   };
 
+  const getStatusText = (status, isPaid) => {
+    if (isPaid) return 'Completed';
+    return status;
+  };
+
+  const getStatusColorWithPaid = (status, isPaid) => {
+    if (isPaid) return 'text-green-600 bg-green-100';
+    return getStatusColor(status);
+  };
+
   const getProgressColor = (progress) => {
     if (progress >= 80) return 'bg-green-500';
     if (progress >= 50) return 'bg-yellow-500';
@@ -152,7 +162,18 @@ const ProjectDetail = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {/* Completed Stamp Overlay for Paid Projects */}
+      {project.paid && (
+        <div className="absolute inset-0 flex items-center justify-center z-[999999] pointer-events-none">
+          <img 
+            src="/completed.png" 
+            alt="Completed" 
+            className="w-72 h-72 object-contain opacity-90"
+          />
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
@@ -172,9 +193,15 @@ const ProjectDetail = () => {
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(project.status)}`}>
-            {project.status}
+          <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColorWithPaid(project.status, project.paid)}`}>
+            {getStatusText(project.status, project.paid)}
           </span>
+          {project.paid && (
+            <span className="px-3 py-1 text-sm font-medium rounded-full bg-green-100 text-green-700 flex items-center space-x-1">
+              <CheckCircle className="h-4 w-4" />
+              <span>Paid</span>
+            </span>
+          )}
           {isOverdue && (
             <div className="flex items-center space-x-1 text-red-600">
               <AlertTriangle className="h-4 w-4" />

@@ -624,23 +624,34 @@ const useProjectStore = create(
       getProjectBillingTotal: (projectId) => {
         const project = get().getProjectById(projectId);
         if (!project || !project.billingItems) return 0;
-        return project.billingItems.reduce((total, item) => total + (item.totalPrice || 0), 0);
+        const billingTotal = project.billingItems.reduce((total, item) => total + (item.totalPrice || 0), 0);
+        const advanceAmount = project.advanceAmount || 0;
+        return billingTotal - advanceAmount;
       },
 
       getProjectSpentTotal: (projectId) => {
         const project = get().getProjectById(projectId);
         if (!project || !project.billingItems) return 0;
-        return project.billingItems
+        const spentTotal = project.billingItems
           .filter(item => item.status === 'completed')
           .reduce((total, item) => total + (item.totalPrice || 0), 0);
+        const advanceAmount = project.advanceAmount || 0;
+        return Math.max(0, spentTotal - advanceAmount);
       },
 
       getProjectRemainingTotal: (projectId) => {
         const project = get().getProjectById(projectId);
         if (!project || !project.billingItems) return 0;
-        return project.billingItems
+        const remainingTotal = project.billingItems
           .filter(item => item.status === 'pending' || item.status === 'in-progress')
           .reduce((total, item) => total + (item.totalPrice || 0), 0);
+        const advanceAmount = project.advanceAmount || 0;
+        const completedTotal = project.billingItems
+          .filter(item => item.status === 'completed')
+          .reduce((total, item) => total + (item.totalPrice || 0), 0);
+        // If advance amount exceeds completed work, it reduces the remaining amount
+        const excessAdvance = Math.max(0, advanceAmount - completedTotal);
+        return Math.max(0, remainingTotal - excessAdvance);
       },
 
       getTasksByUser: (userId) => {

@@ -68,6 +68,16 @@ const Projects = () => {
     }
   };
 
+  const getStatusText = (status, isPaid) => {
+    if (isPaid) return 'Completed';
+    return status;
+  };
+
+  const getStatusColorWithPaid = (status, isPaid) => {
+    if (isPaid) return 'text-green-600 bg-green-100';
+    return getStatusColor(status);
+  };
+
   const getProgressColor = (progress) => {
     if (progress >= 80) return 'bg-green-500';
     if (progress >= 50) return 'bg-yellow-500';
@@ -243,8 +253,8 @@ const Projects = () => {
                          project.type === '2D' ? 'bg-blue-500' : 
                          project.type === 'both' ? 'bg-gradient-to-r from-purple-500 to-blue-500' : 'bg-gray-500'
                        }`} />
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(project.status)}`}>
-                        {project.status}
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColorWithPaid(project.status, project.paid)}`}>
+                        {getStatusText(project.status, project.paid)}
                       </span>
                       {project.paid && (
                         <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700 flex items-center space-x-1">
@@ -330,6 +340,17 @@ const Projects = () => {
                     </div>
                   </div>
                 </Link>
+
+                {/* Completed Stamp Overlay for Paid Projects - Moved outside Link */}
+                {project.paid && (
+                  <div className="absolute inset-0 flex items-center justify-center z-[999999] pointer-events-none">
+                    <img 
+                      src="/completed.png" 
+                      alt="Completed" 
+                      className="w-72 h-72 object-contain opacity-90"
+                    />
+                  </div>
+                )}
 
                 {/* Admin Controls - Fixed positioning to prevent overlapping */}
                 {user?.role === 'admin' && (
