@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { useProjectStore } from '../../stores/projectStore';
 import { useAuthStore } from '../../stores/authStore';
-import { testTaskCreation, testTaskUpdate, checkDatabaseTables } from '../../services/projectService';
+import { testTaskCreation, checkDatabaseTables } from '../../services/projectService';
 import { 
   Plus, 
   Edit, 
@@ -286,11 +286,20 @@ const ProjectTasks = ({ project, taskId }) => {
       }
       
       if (source.droppableId === destination.droppableId) {
-        // Reorder within same column
+        // Reorder within same column - just update local state
         const column = columns[source.droppableId];
         const newTasks = Array.from(column.tasks);
         const [removed] = newTasks.splice(source.index, 1);
         newTasks.splice(destination.index, 0, removed);
+        
+        // Update local state immediately for better UX
+        const updatedProject = {
+          ...project,
+          tasks: project.tasks.map(t => 
+            t.id === taskId ? { ...t, order: destination.index } : t
+          )
+        };
+        useProjectStore.getState().updateProjectLocal(project.id, updatedProject);
         
         toast.success('Task order updated');
       } else {
@@ -316,34 +325,46 @@ const ProjectTasks = ({ project, taskId }) => {
             newProgress = 0;
         }
         
+        // Update local state immediately for better UX
+        const updatedTask = { ...task, status: newStatus, progress: newProgress };
+        const updatedProject = {
+          ...project,
+          tasks: project.tasks.map(t => 
+            t.id === taskId ? updatedTask : t
+          )
+        };
+        useProjectStore.getState().updateProjectLocal(project.id, updatedProject);
+        
+        // Show immediate feedback
+        const statusMessages = {
+          'todo': 'Task moved to To Do',
+          'in-progress': 'Task moved to In Progress',
+          'review': 'Task moved to Review',
+          'completed': 'Task marked as Completed'
+        };
+        toast.success(statusMessages[newStatus] || 'Task status updated');
+        
+        // Update database in background
         try {
-          // Update the task in the database
           const result = await updateTask(project.id, taskId, { 
             status: newStatus, 
             progress: newProgress
           });
           
-          if (result.success) {
-            // Show success message with status change
-            const statusMessages = {
-              'todo': 'Task moved to To Do',
-              'in-progress': 'Task moved to In Progress',
-              'review': 'Task moved to Review',
-              'completed': 'Task marked as Completed'
-            };
-            
-            toast.success(statusMessages[newStatus] || 'Task status updated');
-            
+          if (!result.success) {
+            // Revert local state if database update failed
+            useProjectStore.getState().updateProjectLocal(project.id, project);
+            toast.error(result.error || 'Failed to update task status. Please try again.');
+          } else {
             // Update group status if task belongs to a group
             if (task.groupId) {
               await updateGroupStatus(task.groupId);
             }
-          } else {
-            // Handle error from the store
-            toast.error(result.error || 'Failed to update task status. Please try again.');
           }
         } catch (error) {
           console.error('Failed to update task status:', error);
+          // Revert local state if database update failed
+          useProjectStore.getState().updateProjectLocal(project.id, project);
           toast.error(error.message || 'Failed to update task status. Please try again.');
         }
       }
@@ -361,6 +382,17 @@ const ProjectTasks = ({ project, taskId }) => {
         const newStatus = destination.droppableId;
         
         console.log('Updating group status:', { groupId, newStatus });
+        
+        // Update local state immediately
+        const updatedProject = {
+          ...project,
+          taskGroups: project.taskGroups.map(g => 
+            g.id === groupId ? { ...g, status: newStatus } : g
+          )
+        };
+        useProjectStore.getState().updateProjectLocal(project.id, updatedProject);
+        
+        toast.success(`Group moved to ${newStatus.replace('-', ' ')}`);
         
         try {
           // Update the group status in the database
@@ -558,23 +590,7 @@ const ProjectTasks = ({ project, taskId }) => {
     }
   };
 
-  const handleTestTaskUpdate = async (taskId) => {
-    try {
-      console.log('Testing task update permissions...');
-      const result = await testTaskUpdate(project.id, taskId);
-      console.log('Task update test result:', result);
-      
-      if (result.success) {
-        toast.success(`Task update test passed! ${result.message}`);
-        console.log('Test details:', result.details);
-      } else {
-        toast.error(`Task update test failed: ${result.error}`);
-      }
-    } catch (error) {
-      console.error('Task update test error:', error);
-      toast.error(`Test error: ${error.message}`);
-    }
-  };
+
 
   const handleCheckDatabase = async () => {
     try {
@@ -654,50 +670,13 @@ const ProjectTasks = ({ project, taskId }) => {
               snapshot.isDragging ? 'shadow-xl transform rotate-1 scale-105 opacity-75' : ''
             } ${task.status === 'completed' ? 'border-green-200 bg-green-50' : ''}`}
           >
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex items-center space-x-2">
-                <GripVertical size={16} className="text-gray-400 cursor-grab hover:text-gray-600 transition-colors duration-150" />
-                <h4 className="font-medium text-gray-900 line-clamp-2">{task.title}</h4>
-              </div>
-              <div className="flex items-center space-x-1" onClick={(e) => e.stopPropagation()}>
-                {/* Show edit button for 3D designers if task is assigned to them */}
-                {(user.role === 'admin' || user.role === 'manager' || 
-                  (user.role === '3d-designer' && task.assignedTo === user.id)) ? (
-                  <>
-                    <button
-                      onClick={() => {
-                        setSelectedTask(task);
-                        setIsEditModalOpen(true);
-                      }}
-                      className="p-1 text-gray-400 hover:text-blue-600 cursor-pointer transition-colors duration-150"
-                      title="Edit task"
-                    >
-                      <Edit size={14} />
-                    </button>
-                    {/* Only show delete and test buttons for admin/manager */}
-                    {(user.role === 'admin' || user.role === 'manager') && (
-                      <>
-                        <button
-                          onClick={() => handleDeleteTask(task.id)}
-                          className="p-1 text-gray-400 hover:text-red-600 cursor-pointer transition-colors duration-150"
-                          title="Delete task"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                        <button
-                          onClick={() => handleTestTaskUpdate(task.id)}
-                          className="p-1 text-gray-400 hover:text-orange-600 cursor-pointer transition-colors duration-150"
-                          title="Test task update permissions"
-                        >
-                          <AlertCircle size={14} />
-                        </button>
-                      </>
-                    )}
-                  </>
-                ) : null}
-              </div>
+            {/* Task Header */}
+            <div className="flex items-center space-x-2 mb-3">
+              <GripVertical size={16} className="text-gray-400 cursor-grab hover:text-gray-600 transition-colors duration-150" />
+              <h4 className="font-medium text-gray-900 line-clamp-2 flex-1">{task.title}</h4>
             </div>
 
+            {/* Task Description */}
             <p className="text-sm text-gray-600 mb-3 line-clamp-2">{task.description}</p>
 
             {/* Progress Bar */}
@@ -719,6 +698,7 @@ const ProjectTasks = ({ project, taskId }) => {
               </div>
             </div>
 
+            {/* Priority and Status */}
             <div className="flex items-center justify-between mb-3">
               <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
                 {task.priority}
@@ -728,6 +708,7 @@ const ProjectTasks = ({ project, taskId }) => {
               </span>
             </div>
 
+            {/* Task Details */}
             <div className="space-y-2 mb-3">
               {task.deadline && (
                 <div className="flex items-center text-xs text-gray-500">
@@ -803,6 +784,39 @@ const ProjectTasks = ({ project, taskId }) => {
                 )}
               </div>
             </div>
+
+            {/* Action Buttons - Moved to bottom */}
+            {(user.role === 'admin' || user.role === 'manager' || 
+              (user.role === '3d-designer' && task.assignedTo === user.id)) && (
+              <div className="mt-3 pt-3 border-t border-gray-100">
+                <div className="flex items-center justify-end space-x-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedTask(task);
+                      setIsEditModalOpen(true);
+                    }}
+                    className="p-1.5 text-gray-400 hover:text-blue-600 cursor-pointer transition-colors duration-150 rounded"
+                    title="Edit task"
+                  >
+                    <Edit size={14} />
+                  </button>
+                  {/* Only show delete button for admin/manager */}
+                  {(user.role === 'admin' || user.role === 'manager') && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteTask(task.id);
+                      }}
+                      className="p-1.5 text-gray-400 hover:text-red-600 cursor-pointer transition-colors duration-150 rounded"
+                      title="Delete task"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Drag Handle Indicator */}
             <div className="mt-2 pt-2 border-t border-gray-100">
