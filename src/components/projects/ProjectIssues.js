@@ -30,7 +30,8 @@ const ProjectIssues = ({ project }) => {
     addIssue, 
     updateIssue, 
     approveIssue, 
-    rejectIssue 
+    rejectIssue,
+    loadTaskGroups
   } = useProjectStore();
   
   // Load users on component mount
@@ -47,6 +48,21 @@ const ProjectIssues = ({ project }) => {
     
     loadUsers();
   }, [getAllUsers]);
+
+  // Load task groups when component mounts
+  useEffect(() => {
+    const loadTaskGroups = async () => {
+      if (project?.id) {
+        try {
+          await loadTaskGroups(project.id);
+        } catch (error) {
+          console.error('Failed to load task groups:', error);
+        }
+      }
+    };
+    
+    loadTaskGroups();
+  }, [project?.id, loadTaskGroups]);
   
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -61,7 +77,8 @@ const ProjectIssues = ({ project }) => {
     type: 'general',
     priority: 'medium',
     assignedTo: '',
-    taskId: ''
+    taskId: '',
+    groupId: '' // Add groupId to track selected group
   });
 
   const issueTypes = [
@@ -117,7 +134,8 @@ const ProjectIssues = ({ project }) => {
           type: 'general',
           priority: 'medium',
           assignedTo: '',
-          taskId: ''
+          taskId: '',
+          groupId: '' // Reset groupId as well
         });
         setIsAddModalOpen(false);
         toast.success('Issue created successfully');
@@ -195,6 +213,29 @@ const ProjectIssues = ({ project }) => {
     return teamMember?.avatar || null;
   };
 
+  // Get filtered tasks based on selected group
+  const getFilteredTasks = () => {
+    if (!newIssue.groupId) {
+      return project?.tasks || [];
+    }
+    return project?.tasks?.filter(task => task.groupId === newIssue.groupId) || [];
+  };
+
+  // Get group name by ID
+  const getGroupName = (groupId) => {
+    if (!groupId) return '';
+    const group = project?.taskGroups?.find(g => g.id === groupId);
+    return group?.name || '';
+  };
+
+  // Get filtered tasks for edit modal based on selected group
+  const getFilteredTasksForEdit = () => {
+    if (!selectedIssue?.groupId) {
+      return project?.tasks || [];
+    }
+    return project?.tasks?.filter(task => task.groupId === selectedIssue.groupId) || [];
+  };
+
   const IssueCard = ({ issue }) => {
     const typeInfo = getIssueTypeInfo(issue.type);
     const statusInfo = getStatusInfo(issue.status);
@@ -252,6 +293,11 @@ const ProjectIssues = ({ project }) => {
               <Tag size={12} className="mr-1 text-blue-600" />
               <span className="text-blue-800 font-medium">Linked Task:</span>
               <span className="text-blue-700 ml-1">{getTaskName(issue.taskId)}</span>
+              {issue.groupId && (
+                <span className="text-blue-600 ml-2">
+                  (Group: {getGroupName(issue.groupId)})
+                </span>
+              )}
             </div>
           )}
           
@@ -578,25 +624,56 @@ const ProjectIssues = ({ project }) => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Related Task *
+                    Task Group
                   </label>
                   <select
-                    value={newIssue.taskId}
-                    onChange={(e) => setNewIssue({ ...newIssue, taskId: e.target.value })}
+                    value={newIssue.groupId}
+                    onChange={(e) => {
+                      setNewIssue({ 
+                        ...newIssue, 
+                        groupId: e.target.value,
+                        taskId: '' // Reset task selection when group changes
+                      });
+                    }}
                     className="input-field"
-                    required
                   >
-                    <option value="">Select task to link issue</option>
-                    {project.tasks.map(task => (
-                      <option key={task.id} value={task.id}>
-                        {task.title} ({task.status.replace('-', ' ')}) - {task.progress || 0}%
+                    <option value="">All Groups</option>
+                    {project?.taskGroups?.map(group => (
+                      <option key={group.id} value={group.id}>
+                        {group.name}
                       </option>
                     ))}
                   </select>
                   <p className="text-xs text-gray-500 mt-1">
-                    Linking to a task helps track issues related to specific work items
+                    Select a group to filter tasks (optional)
                   </p>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Related Task *
+                </label>
+                <select
+                  value={newIssue.taskId}
+                  onChange={(e) => setNewIssue({ ...newIssue, taskId: e.target.value })}
+                  className="input-field"
+                  required
+                >
+                  <option value="">Select task to link issue</option>
+                  {getFilteredTasks().map(task => (
+                    <option key={task.id} value={task.id}>
+                      {task.title} ({task.status.replace('-', ' ')}) - {task.progress || 0}%
+                      {task.groupId && ` - ${getGroupName(task.groupId)}`}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  {newIssue.groupId 
+                    ? `Showing tasks from group: ${getGroupName(newIssue.groupId)}`
+                    : 'Showing all tasks. Select a group above to filter.'
+                  }
+                </p>
               </div>
 
               {newIssue.taskId && (
@@ -607,6 +684,11 @@ const ProjectIssues = ({ project }) => {
                   </div>
                   <p className="text-sm text-blue-700 mt-1">
                     Issue will be linked to: <strong>{getTaskName(newIssue.taskId)}</strong>
+                    {newIssue.groupId && (
+                      <span className="block text-xs text-blue-600">
+                        Group: {getGroupName(newIssue.groupId)}
+                      </span>
+                    )}
                   </p>
                 </div>
               )}
@@ -745,6 +827,77 @@ const ProjectIssues = ({ project }) => {
                   </select>
                 </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Task Group
+                  </label>
+                  <select
+                    value={selectedIssue.groupId || ''}
+                    onChange={(e) => {
+                      setSelectedIssue({ 
+                        ...selectedIssue, 
+                        groupId: e.target.value,
+                        taskId: '' // Reset task selection when group changes
+                      });
+                    }}
+                    className="input-field"
+                  >
+                    <option value="">All Groups</option>
+                    {project?.taskGroups?.map(group => (
+                      <option key={group.id} value={group.id}>
+                        {group.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Select a group to filter tasks (optional)
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Related Task
+                  </label>
+                  <select
+                    value={selectedIssue.taskId || ''}
+                    onChange={(e) => setSelectedIssue({ ...selectedIssue, taskId: e.target.value })}
+                    className="input-field"
+                  >
+                    <option value="">Select task to link issue</option>
+                    {getFilteredTasksForEdit().map(task => (
+                      <option key={task.id} value={task.id}>
+                        {task.title} ({task.status.replace('-', ' ')}) - {task.progress || 0}%
+                        {task.groupId && ` - ${getGroupName(task.groupId)}`}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {selectedIssue?.groupId 
+                      ? `Showing tasks from group: ${getGroupName(selectedIssue.groupId)}`
+                      : 'Showing all tasks. Select a group above to filter.'
+                    }
+                  </p>
+                </div>
+              </div>
+
+              {selectedIssue?.taskId && (
+                <div className="bg-blue-50 p-3 rounded-md border border-blue-200">
+                  <div className="flex items-center space-x-2 text-blue-800">
+                    <Tag size={16} />
+                    <span className="text-sm font-medium">Linked Task</span>
+                  </div>
+                  <p className="text-sm text-blue-700 mt-1">
+                    Issue will be linked to: <strong>{getTaskName(selectedIssue.taskId)}</strong>
+                    {selectedIssue?.groupId && (
+                      <span className="block text-xs text-blue-600">
+                        Group: {getGroupName(selectedIssue.groupId)}
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-end space-x-3 mt-6">

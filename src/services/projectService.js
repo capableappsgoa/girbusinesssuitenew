@@ -134,6 +134,7 @@ export const fetchProjects = async () => {
             assignedTo: issue.assigned_to,
             reportedBy: issue.reported_by,
             taskId: issue.task_id,
+            groupId: issue.group_id,
             createdAt: issue.created_at,
             updatedAt: issue.updated_at
           }));
@@ -703,6 +704,7 @@ export const fetchProjectById = async (projectId) => {
         assignedTo: issue.assigned_to,
         reportedBy: issue.reported_by,
         taskId: issue.task_id,
+        groupId: issue.group_id,
         createdAt: issue.created_at,
         updatedAt: issue.updated_at
       }));
@@ -989,6 +991,7 @@ export const createIssue = async (projectId, issueData) => {
         assigned_to: issueData.assignedTo || null,
         reported_by: issueData.reportedBy || null,
         task_id: issueData.taskId || null,
+        group_id: issueData.groupId || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -1013,6 +1016,7 @@ export const createIssue = async (projectId, issueData) => {
       assignedTo: data.assigned_to,
       reportedBy: data.reported_by,
       taskId: data.task_id,
+      groupId: data.group_id,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -1026,12 +1030,23 @@ export const createIssue = async (projectId, issueData) => {
 
 export const updateIssue = async (issueId, updates) => {
   try {
+    // Map camelCase to snake_case for database
+    const dbUpdates = {
+      title: updates.title,
+      description: updates.description,
+      status: updates.status,
+      priority: updates.priority,
+      type: updates.type,
+      assigned_to: updates.assignedTo,
+      reported_by: updates.reportedBy,
+      task_id: updates.taskId,
+      group_id: updates.groupId,
+      updated_at: new Date().toISOString()
+    };
+
     const { data, error } = await supabase
       .from(TABLES.ISSUES)
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString()
-      })
+      .update(dbUpdates)
       .eq('id', issueId)
       .select()
       .single();
@@ -1054,6 +1069,7 @@ export const updateIssue = async (issueId, updates) => {
       assignedTo: data.assigned_to,
       reportedBy: data.reported_by,
       taskId: data.task_id,
+      groupId: data.group_id,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
