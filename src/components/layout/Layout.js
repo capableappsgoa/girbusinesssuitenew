@@ -16,7 +16,8 @@ import {
   Plus,
   Building2,
   TrendingUp,
-  FileText
+  FileText,
+  CheckSquare
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -37,6 +38,12 @@ const Layout = ({ children }) => {
       href: '/projects',
       icon: FolderOpen,
       roles: ['admin', 'manager', 'designer', 'billing']
+    },
+    {
+      name: 'Tasks',
+      href: '/tasks',
+      icon: CheckSquare,
+      roles: ['designer']
     },
     {
       name: 'Companies',

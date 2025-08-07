@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { useProjectStore } from '../../stores/projectStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -19,18 +19,31 @@ import {
   Paperclip,
   Eye,
   EyeOff,
-  GripVertical
+  GripVertical,
+  FolderOpen,
+  Grid3X3,
+  List,
+  X,
+  ChevronDown,
+  ChevronRight,
+  ChevronLeft
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import TaskGroupCard from './TaskGroupCard';
+import TaskGroupModal from './TaskGroupModal';
 
-const ProjectTasks = ({ project }) => {
+const ProjectTasks = ({ project, taskId }) => {
   const { user, getAllUsers } = useAuthStore();
   const { 
     updateTask, 
     addTask, 
     assignTask,
     deleteTask,
-    getProjectBillingTotal 
+    getProjectBillingTotal,
+    loadTaskGroups,
+    addTaskGroup,
+    updateTaskGroup,
+    deleteTaskGroup
   } = useProjectStore();
   
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -38,29 +51,40 @@ const ProjectTasks = ({ project }) => {
   const [selectedTask, setSelectedTask] = useState(null);
   const [showCompleted, setShowCompleted] = useState(true);
   const [allUsers, setAllUsers] = useState([]);
+  const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [expandedGroups, setExpandedGroups] = useState(new Set());
+  const [currentGroup, setCurrentGroup] = useState(null);
   const [newTask, setNewTask] = useState({
     title: '',
     description: '',
     assignedTo: '',
     priority: 'medium',
     deadline: '',
-    billingItemId: ''
+    billingItemId: '',
+    groupId: ''
   });
 
-  // Load users on component mount
+  // Load users and task groups on component mount
   useEffect(() => {
-    const loadUsers = async () => {
+    const loadData = async () => {
       try {
+        // Load users
         const users = await getAllUsers();
         setAllUsers(users);
+        
+        // Load task groups
+        if (project?.id) {
+          await loadTaskGroups(project.id);
+        }
       } catch (error) {
-        console.error('Failed to load users:', error);
+        console.error('Failed to load data:', error);
         setAllUsers([]);
       }
     };
     
-    loadUsers();
-  }, [getAllUsers]);
+    loadData();
+  }, [getAllUsers, project?.id, loadTaskGroups]);
 
   // Initialize drag and drop properly
   const [isDragReady, setIsDragReady] = useState(false);
@@ -84,22 +108,161 @@ const ProjectTasks = ({ project }) => {
     }
   }, [project?.id]);
 
-  const columns = {
-    todo: {
-      title: 'To Do',
-      tasks: project?.tasks?.filter(task => task.status === 'todo') || []
-    },
-    'in-progress': {
-      title: 'In Progress',
-      tasks: project?.tasks?.filter(task => task.status === 'in-progress') || []
-    },
-    'review': {
-      title: 'Review',
-      tasks: project?.tasks?.filter(task => task.status === 'review') || []
-    },
-    completed: {
-      title: 'Completed',
-      tasks: project?.tasks?.filter(task => task.status === 'completed') || []
+  // Update group statuses when tasks change
+  useEffect(() => {
+    if (project?.taskGroups && project?.tasks) {
+      // Only update group statuses on initial load, not on every task change
+      // This prevents conflicts with manual group status updates from drag and drop
+      const updateAllGroupStatuses = async () => {
+        for (const group of project.taskGroups) {
+          await updateGroupStatus(group.id);
+        }
+      };
+      updateAllGroupStatuses();
+    }
+  }, [project?.id]); // Only run when project ID changes, not on every task/group change
+
+  // Scroll to specific task if taskId is provided
+  useEffect(() => {
+    if (taskId && project?.tasks) {
+      const task = project.tasks.find(t => t.id === taskId);
+      if (task) {
+        // Find which column the task is in
+        const taskColumn = task.status;
+        const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+        
+        if (taskElement) {
+          // Scroll to the task element
+          taskElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+          
+          // Add a highlight effect
+          taskElement.classList.add('ring-2', 'ring-blue-500', 'ring-opacity-50');
+          setTimeout(() => {
+            taskElement.classList.remove('ring-2', 'ring-blue-500', 'ring-opacity-50');
+          }, 3000);
+        }
+      }
+    }
+  }, [taskId, project?.tasks]);
+
+  // Filter tasks based on user role
+  const filterTasksByRole = (tasks) => {
+    if (!tasks) return [];
+    
+    // If user is a 3D designer, only show tasks assigned to them
+    if (user.role === '3d-designer') {
+      return tasks.filter(task => task.assignedTo === user.id);
+    }
+    
+    // For admin, manager, and other roles, show all tasks
+    return tasks;
+  };
+
+  // Filter groups based on user role - 3D designers can only see groups that contain their assigned tasks
+  const filterGroupsByRole = (groups) => {
+    if (user.role === '3d-designer') {
+      return groups.filter(group => {
+        // Check if this group has any tasks assigned to the 3D designer
+        const groupTasks = project?.tasks?.filter(task => task.groupId === group.id) || [];
+        return groupTasks.some(task => task.assignedTo === user.id);
+      });
+    }
+    // For admin, manager, and other roles, show all groups
+    return groups;
+  };
+
+  const columns = useMemo(() => {
+    console.log('Columns useMemo triggered with:', {
+      projectTasks: project?.tasks?.length,
+      projectTaskGroups: project?.taskGroups?.length,
+      currentGroup: currentGroup?.id,
+      userRole: user.role
+    });
+    
+    const result = {
+      todo: {
+        title: 'To Do',
+        tasks: filterTasksByRole(
+          currentGroup 
+            ? project?.tasks?.filter(task => task.status === 'todo' && task.groupId === currentGroup.id)
+            : project?.tasks?.filter(task => task.status === 'todo' && !task.groupId)
+        ) || [],
+        groups: currentGroup ? [] : filterGroupsByRole(project?.taskGroups?.filter(group => group.status === 'todo')) || []
+      },
+      'in-progress': {
+        title: 'In Progress',
+        tasks: filterTasksByRole(
+          currentGroup 
+            ? project?.tasks?.filter(task => task.status === 'in-progress' && task.groupId === currentGroup.id)
+            : project?.tasks?.filter(task => task.status === 'in-progress' && !task.groupId)
+        ) || [],
+        groups: currentGroup ? [] : filterGroupsByRole(project?.taskGroups?.filter(group => group.status === 'in-progress')) || []
+      },
+      'review': {
+        title: 'Review',
+        tasks: filterTasksByRole(
+          currentGroup 
+            ? project?.tasks?.filter(task => task.status === 'review' && task.groupId === currentGroup.id)
+            : project?.tasks?.filter(task => task.status === 'review' && !task.groupId)
+        ) || [],
+        groups: currentGroup ? [] : filterGroupsByRole(project?.taskGroups?.filter(group => group.status === 'review')) || []
+      },
+      completed: {
+        title: 'Completed',
+        tasks: filterTasksByRole(
+          currentGroup 
+            ? project?.tasks?.filter(task => task.status === 'completed' && task.groupId === currentGroup.id)
+            : project?.tasks?.filter(task => task.status === 'completed' && !task.groupId)
+        ) || [],
+        groups: currentGroup ? [] : filterGroupsByRole(project?.taskGroups?.filter(group => group.status === 'completed')) || []
+      }
+    };
+    
+    console.log('Columns result:', {
+      todoTasks: result.todo.tasks.length,
+      todoGroups: result.todo.groups.length,
+      inProgressTasks: result['in-progress'].tasks.length,
+      inProgressGroups: result['in-progress'].groups.length,
+      reviewTasks: result.review.tasks.length,
+      reviewGroups: result.review.groups.length,
+      completedTasks: result.completed.tasks.length,
+      completedGroups: result.completed.groups.length
+    });
+    
+    return result;
+  }, [project?.tasks, project?.taskGroups, currentGroup, user.role]);
+
+  // Function to check and update group status based on its tasks
+  const updateGroupStatus = async (groupId) => {
+    const groupTasks = project?.tasks?.filter(task => task.groupId === groupId) || [];
+    
+    if (groupTasks.length === 0) return; // No tasks in group
+    
+    const completedTasks = groupTasks.filter(task => task.status === 'completed').length;
+    const totalTasks = groupTasks.length;
+    
+    let newGroupStatus = 'todo';
+    
+    if (completedTasks === totalTasks) {
+      // All tasks completed
+      newGroupStatus = 'completed';
+    } else if (completedTasks > 0) {
+      // Some tasks completed
+      newGroupStatus = 'in-progress';
+    }
+    
+    // Only update if status changed
+    const currentGroup = project?.taskGroups?.find(g => g.id === groupId);
+    if (currentGroup && currentGroup.status !== newGroupStatus) {
+      try {
+        await updateTaskGroup(project.id, groupId, { status: newGroupStatus });
+        console.log(`Group ${groupId} status updated to ${newGroupStatus}`);
+      } catch (error) {
+        console.error('Failed to update group status:', error);
+      }
     }
   };
 
@@ -108,71 +271,133 @@ const ProjectTasks = ({ project }) => {
 
     const { source, destination, draggableId } = result;
     
-    // Extract task ID from draggableId (format: "task-{id}")
-    const taskId = draggableId.replace('task-', '');
-    
-    if (source.droppableId === destination.droppableId) {
-      // Reorder within same column
-      const column = columns[source.droppableId];
-      const newTasks = Array.from(column.tasks);
-      const [removed] = newTasks.splice(source.index, 1);
-      newTasks.splice(destination.index, 0, removed);
+    // Check if this is a task or group drag
+    if (draggableId.startsWith('task-')) {
+      // Handle task drag
+      const taskId = draggableId.replace('task-', '');
       
-      toast.success('Task order updated');
-    } else {
-      // Move to different column
-      const newStatus = destination.droppableId;
+      // Find the task to check permissions
+      const task = project?.tasks?.find(t => t.id === taskId);
       
-      // Update progress based on new status
-      let newProgress = 0;
-      switch (newStatus) {
-        case 'todo':
-          newProgress = 0;
-          break;
-        case 'in-progress':
-          newProgress = 50;
-          break;
-        case 'review':
-          newProgress = 80;
-          break;
-        case 'completed':
-          newProgress = 100;
-          break;
-        default:
-          newProgress = 0;
+      // For 3D designers, only allow updates on tasks assigned to them
+      if (user.role === '3d-designer' && task && task.assignedTo !== user.id) {
+        toast.error('You can only update tasks assigned to you');
+        return;
       }
       
-      try {
-        // Update the task in the database
-        const result = await updateTask(project.id, taskId, { 
-          status: newStatus, 
-          progress: newProgress
-        });
+      if (source.droppableId === destination.droppableId) {
+        // Reorder within same column
+        const column = columns[source.droppableId];
+        const newTasks = Array.from(column.tasks);
+        const [removed] = newTasks.splice(source.index, 1);
+        newTasks.splice(destination.index, 0, removed);
         
-        if (result.success) {
-          // Show success message with status change
-          const statusMessages = {
-            'todo': 'Task moved to To Do',
-            'in-progress': 'Task moved to In Progress',
-            'review': 'Task moved to Review',
-            'completed': 'Task marked as Completed'
-          };
-          
-          toast.success(statusMessages[newStatus] || 'Task status updated');
-        } else {
-          // Handle error from the store
-          toast.error(result.error || 'Failed to update task status. Please try again.');
+        toast.success('Task order updated');
+      } else {
+        // Move to different column
+        const newStatus = destination.droppableId;
+        
+        // Update progress based on new status
+        let newProgress = 0;
+        switch (newStatus) {
+          case 'todo':
+            newProgress = 0;
+            break;
+          case 'in-progress':
+            newProgress = 50;
+            break;
+          case 'review':
+            newProgress = 80;
+            break;
+          case 'completed':
+            newProgress = 100;
+            break;
+          default:
+            newProgress = 0;
         }
-      } catch (error) {
-        console.error('Failed to update task status:', error);
-        toast.error(error.message || 'Failed to update task status. Please try again.');
+        
+        try {
+          // Update the task in the database
+          const result = await updateTask(project.id, taskId, { 
+            status: newStatus, 
+            progress: newProgress
+          });
+          
+          if (result.success) {
+            // Show success message with status change
+            const statusMessages = {
+              'todo': 'Task moved to To Do',
+              'in-progress': 'Task moved to In Progress',
+              'review': 'Task moved to Review',
+              'completed': 'Task marked as Completed'
+            };
+            
+            toast.success(statusMessages[newStatus] || 'Task status updated');
+            
+            // Update group status if task belongs to a group
+            if (task.groupId) {
+              await updateGroupStatus(task.groupId);
+            }
+          } else {
+            // Handle error from the store
+            toast.error(result.error || 'Failed to update task status. Please try again.');
+          }
+        } catch (error) {
+          console.error('Failed to update task status:', error);
+          toast.error(error.message || 'Failed to update task status. Please try again.');
+        }
+      }
+    } else if (draggableId.startsWith('group-')) {
+      // Handle group drag
+      const groupId = draggableId.replace('group-', '');
+      
+      console.log('Group drag detected:', { groupId, source: source.droppableId, destination: destination.droppableId });
+      
+      if (source.droppableId === destination.droppableId) {
+        // Reorder within same column
+        toast.success('Group order updated');
+      } else {
+        // Move group to different column
+        const newStatus = destination.droppableId;
+        
+        console.log('Updating group status:', { groupId, newStatus });
+        
+        try {
+          // Update the group status in the database
+          const result = await updateTaskGroup(project.id, groupId, { 
+            status: newStatus
+          });
+          
+          console.log('Group status update result:', result);
+          
+          if (result.success) {
+            // Show success message with status change
+            const statusMessages = {
+              'todo': 'Group moved to To Do',
+              'in-progress': 'Group moved to In Progress',
+              'review': 'Group moved to Review',
+              'completed': 'Group marked as Completed'
+            };
+            
+            toast.success(statusMessages[newStatus] || 'Group status updated');
+            
+            // Force a re-render by updating the project data
+            console.log('Group status updated successfully, current project taskGroups:', project?.taskGroups);
+          } else {
+            // Handle error from the store
+            toast.error(result.error || 'Failed to update group status. Please try again.');
+          }
+        } catch (error) {
+          console.error('Failed to update group status:', error);
+          toast.error(error.message || 'Failed to update group status. Please try again.');
+        }
       }
     }
   };
 
   const handleAddTask = async () => {
-    if (!newTask.title || !newTask.description) {
-      toast.error('Please fill in all required fields');
+    if (!newTask.title) {
+      toast.error('Task title is required');
       return;
     }
 
@@ -185,13 +410,24 @@ const ProjectTasks = ({ project }) => {
         progress: 0,
         timeSpent: 0,
         deadline: newTask.deadline || null,
-        billingItemId: newTask.billingItemId || null
+        billingItemId: newTask.billingItemId || null,
+        // Ensure the task is assigned to the current group if we're inside one
+        groupId: currentGroup ? currentGroup.id : (newTask.groupId || null)
       };
 
+      console.log('handleAddTask - currentGroup:', currentGroup);
+      console.log('handleAddTask - newTask.groupId:', newTask.groupId);
+      console.log('handleAddTask - taskToAdd.groupId:', taskToAdd.groupId);
       console.log('Adding task:', taskToAdd);
       const result = await addTask(project.id, taskToAdd);
 
       if (result.success) {
+        console.log('Task added successfully - result:', result);
+        console.log('Task added successfully - result.data:', result.data);
+        console.log('Task added successfully - result.data.groupId:', result.data?.groupId);
+        console.log('Task added successfully - result.task:', result.task);
+        console.log('Task added successfully - result.task.groupId:', result.task?.groupId);
+        
         // Reset form
         setNewTask({
           title: '',
@@ -199,10 +435,16 @@ const ProjectTasks = ({ project }) => {
           assignedTo: '',
           priority: 'medium',
           deadline: '',
-          billingItemId: ''
+          billingItemId: '',
+          groupId: currentGroup ? currentGroup.id : ''
         });
         setIsAddModalOpen(false);
         toast.success('Task added successfully');
+        
+        // Update group status if task was added to a group
+        if (taskToAdd.groupId) {
+          await updateGroupStatus(taskToAdd.groupId);
+        }
       } else {
         // Handle error from the store
         toast.error(result.error || 'Failed to add task. Please try again.');
@@ -214,8 +456,14 @@ const ProjectTasks = ({ project }) => {
   };
 
   const handleEditTask = async () => {
-    if (!selectedTask.title || !selectedTask.description) {
-      toast.error('Please fill in all required fields');
+    if (!selectedTask.title) {
+      toast.error('Task title is required');
+      return;
+    }
+
+    // For 3D designers, only allow editing tasks assigned to them
+    if (user.role === '3d-designer' && selectedTask.assignedTo !== user.id) {
+      toast.error('You can only edit tasks assigned to you');
       return;
     }
 
@@ -232,8 +480,8 @@ const ProjectTasks = ({ project }) => {
         timeSpent: selectedTask.timeSpent || 0,
         // Ensure progress is a number
         progress: parseInt(selectedTask.progress) || 0,
-        // Ensure assignedTo is a valid UUID or null
-        assignedTo: selectedTask.assignedTo || null,
+        // For 3D designers, don't allow changing assignment
+        assignedTo: user.role === '3d-designer' ? user.id : (selectedTask.assignedTo || null),
         // Only include deadline if it exists
         ...(selectedTask.deadline && { deadline: selectedTask.deadline })
       };
@@ -247,6 +495,11 @@ const ProjectTasks = ({ project }) => {
         setIsEditModalOpen(false);
         setSelectedTask(null);
         toast.success('Task updated successfully');
+        
+        // Update group status if task belongs to a group
+        if (selectedTask.groupId) {
+          await updateGroupStatus(selectedTask.groupId);
+        }
       } else {
         // Handle error from the store
         toast.error(result.error || 'Failed to update task. Please try again.');
@@ -260,6 +513,10 @@ const ProjectTasks = ({ project }) => {
   const handleDeleteTask = async (taskId) => {
     if (window.confirm('Are you sure you want to delete this task?')) {
       try {
+        // Get the task before deleting to check if it belongs to a group
+        const taskToDelete = project.tasks?.find(task => task.id === taskId);
+        const groupId = taskToDelete?.groupId;
+        
         // Remove task from project using local update (for immediate UI feedback)
         const updatedTasks = project.tasks?.filter(task => task.id !== taskId) || [];
         useProjectStore.getState().updateProjectLocal(project.id, { tasks: updatedTasks });
@@ -267,6 +524,11 @@ const ProjectTasks = ({ project }) => {
         // Call the database delete function
         await deleteTask(taskId);
         toast.success('Task deleted successfully');
+        
+        // Update group status if task belonged to a group
+        if (groupId) {
+          await updateGroupStatus(groupId);
+        }
       } catch (error) {
         console.error('Failed to delete task:', error);
         toast.error('Failed to delete task. Please try again.');
@@ -365,28 +627,42 @@ const ProjectTasks = ({ project }) => {
     return user?.avatar || null;
   };
 
+  const toggleGroupExpansion = (groupId) => {
+    const newExpandedGroups = new Set(expandedGroups);
+    if (newExpandedGroups.has(groupId)) {
+      newExpandedGroups.delete(groupId);
+    } else {
+      newExpandedGroups.add(groupId);
+    }
+    setExpandedGroups(newExpandedGroups);
+  };
+
   const TaskCard = ({ task, index }) => {
     const assignedUser = allUsers.find(member => member.id === task.assignedTo);
     const billingItem = project?.billingItems.find(item => item.id === task.billingItemId);
+    const taskGroup = project?.taskGroups?.find(group => group.id === task.groupId);
 
     return (
       <Draggable draggableId={`task-${task.id}`} index={index}>
         {(provided, snapshot) => (
-                     <div
-             ref={provided.innerRef}
-             {...provided.draggableProps}
-             {...provided.dragHandleProps}
-             className={`bg-white rounded-lg border p-4 mb-3 shadow-sm hover:shadow-md transition-all duration-150 cursor-grab active:cursor-grabbing ${
-               snapshot.isDragging ? 'shadow-xl transform rotate-1 scale-105 opacity-75' : ''
-             } ${task.status === 'completed' ? 'border-green-200 bg-green-50' : ''}`}
-           >
-             <div className="flex items-start justify-between mb-2">
-               <div className="flex items-center space-x-2">
-                 <GripVertical size={16} className="text-gray-400 cursor-grab hover:text-gray-600 transition-colors duration-150" />
-                 <h4 className="font-medium text-gray-900 line-clamp-2">{task.title}</h4>
-               </div>
+          <div
+            ref={provided.innerRef}
+            {...provided.draggableProps}
+            {...provided.dragHandleProps}
+            data-task-id={task.id}
+            className={`bg-white rounded-lg border p-4 mb-3 shadow-sm hover:shadow-md transition-all duration-150 cursor-grab active:cursor-grabbing ${
+              snapshot.isDragging ? 'shadow-xl transform rotate-1 scale-105 opacity-75' : ''
+            } ${task.status === 'completed' ? 'border-green-200 bg-green-50' : ''}`}
+          >
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex items-center space-x-2">
+                <GripVertical size={16} className="text-gray-400 cursor-grab hover:text-gray-600 transition-colors duration-150" />
+                <h4 className="font-medium text-gray-900 line-clamp-2">{task.title}</h4>
+              </div>
               <div className="flex items-center space-x-1" onClick={(e) => e.stopPropagation()}>
-                {user.role === 'admin' || user.role === 'manager' ? (
+                {/* Show edit button for 3D designers if task is assigned to them */}
+                {(user.role === 'admin' || user.role === 'manager' || 
+                  (user.role === '3d-designer' && task.assignedTo === user.id)) ? (
                   <>
                     <button
                       onClick={() => {
@@ -398,20 +674,25 @@ const ProjectTasks = ({ project }) => {
                     >
                       <Edit size={14} />
                     </button>
-                    <button
-                      onClick={() => handleDeleteTask(task.id)}
-                      className="p-1 text-gray-400 hover:text-red-600 cursor-pointer transition-colors duration-150"
-                      title="Delete task"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                    <button
-                      onClick={() => handleTestTaskUpdate(task.id)}
-                      className="p-1 text-gray-400 hover:text-orange-600 cursor-pointer transition-colors duration-150"
-                      title="Test task update permissions"
-                    >
-                      <AlertCircle size={14} />
-                    </button>
+                    {/* Only show delete and test buttons for admin/manager */}
+                    {(user.role === 'admin' || user.role === 'manager') && (
+                      <>
+                        <button
+                          onClick={() => handleDeleteTask(task.id)}
+                          className="p-1 text-gray-400 hover:text-red-600 cursor-pointer transition-colors duration-150"
+                          title="Delete task"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleTestTaskUpdate(task.id)}
+                          className="p-1 text-gray-400 hover:text-orange-600 cursor-pointer transition-colors duration-150"
+                          title="Test task update permissions"
+                        >
+                          <AlertCircle size={14} />
+                        </button>
+                      </>
+                    )}
                   </>
                 ) : null}
               </div>
@@ -466,6 +747,14 @@ const ProjectTasks = ({ project }) => {
                 <div className="flex items-center text-xs text-gray-500">
                   <DollarSign size={12} className="mr-1" />
                   {billingItem.name} - ₹{billingItem.totalPrice}
+                </div>
+              )}
+              
+              {/* Show group information for 3D designers */}
+              {user.role === '3d-designer' && taskGroup && (
+                <div className="flex items-center text-xs text-gray-500">
+                  <FolderOpen size={12} className="mr-1" />
+                  <span>From Group: {taskGroup.name}</span>
                 </div>
               )}
             </div>
@@ -532,10 +821,103 @@ const ProjectTasks = ({ project }) => {
     );
   };
 
+  const GroupCard = ({ group, index }) => {
+    const groupTasks = project?.tasks?.filter(task => task.groupId === group.id) || [];
+    
+    const taskCounts = {
+      todo: groupTasks.filter(task => task.status === 'todo').length,
+      'in-progress': groupTasks.filter(task => task.status === 'in-progress').length,
+      review: groupTasks.filter(task => task.status === 'review').length,
+      completed: groupTasks.filter(task => task.status === 'completed').length
+    };
+
+    return (
+      <Draggable draggableId={`group-${group.id}`} index={index}>
+        {(provided, snapshot) => (
+          <div
+            ref={provided.innerRef}
+            {...provided.draggableProps}
+            {...provided.dragHandleProps}
+            className={`bg-white rounded-lg border-2 border-dashed p-4 mb-4 shadow-sm hover:shadow-md transition-all duration-150 cursor-pointer ${
+              snapshot.isDragging ? 'shadow-lg transform rotate-2' : ''
+            }`}
+            style={{ 
+              borderColor: group.color, 
+              backgroundColor: `${group.color}10`,
+              ...provided.draggableProps.style
+            }}
+            onClick={() => {
+              // Navigate into the group
+              setCurrentGroup(group);
+            }}
+          >
+            {/* Group Name */}
+            <div className="flex items-center space-x-3 mb-2">
+              <FolderOpen size={20} className="text-gray-600" />
+              <h3 className="font-semibold text-gray-900">{group.name}</h3>
+            </div>
+            
+            {/* Group Description */}
+            {group.description && (
+              <p className="text-sm text-gray-600 mb-3">{group.description}</p>
+            )}
+            
+            {/* Task Count Icons */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1">
+                  <Clock size={12} className="text-gray-500" />
+                  <span className="text-xs text-gray-600">{taskCounts.todo}</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <PlayCircle size={12} className="text-blue-500" />
+                  <span className="text-xs text-blue-600">{taskCounts['in-progress']}</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <AlertCircle size={12} className="text-yellow-500" />
+                  <span className="text-xs text-yellow-600">{taskCounts.review}</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <CheckCircle size={12} className="text-green-500" />
+                  <span className="text-xs text-green-600">{taskCounts.completed}</span>
+                </div>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex items-center space-x-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedGroup(group);
+                    setIsGroupModalOpen(true);
+                  }}
+                  className="p-1 text-gray-500 hover:text-blue-600 transition-colors"
+                >
+                  <Edit size={14} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteTaskGroup(project.id, group.id);
+                  }}
+                  className="p-1 text-gray-500 hover:text-red-600 transition-colors"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </Draggable>
+    );
+  };
+
   const Column = ({ columnId, column }) => {
     const filteredTasks = showCompleted 
       ? column.tasks 
       : column.tasks?.filter(task => task.status !== 'completed') || [];
+    
+    const filteredGroups = currentGroup ? [] : column.groups || [];
 
     const getColumnColor = (columnId) => {
       switch (columnId) {
@@ -565,7 +947,7 @@ const ProjectTasks = ({ project }) => {
             <h3 className="font-semibold text-gray-900">{column.title}</h3>
           </div>
           <span className="bg-white text-gray-700 px-2 py-1 rounded-full text-xs font-medium shadow-sm">
-            {filteredTasks.length}
+            {currentGroup ? filteredTasks.length : filteredTasks.length + filteredGroups.length}
           </span>
         </div>
         
@@ -580,17 +962,30 @@ const ProjectTasks = ({ project }) => {
                   : 'bg-transparent'
               }`}
             >
-              {filteredTasks.length === 0 ? (
+              {/* Render Groups First (only when not inside a group) */}
+              {filteredGroups.map((group, index) => (
+                <GroupCard key={group.id} group={group} index={index} />
+              ))}
+              
+              {/* Render Tasks After Groups */}
+              {filteredTasks.map((task, index) => (
+                <TaskCard key={task.id} task={task} index={filteredGroups.length + index} />
+              ))}
+              
+              {filteredTasks.length === 0 && filteredGroups.length === 0 ? (
                 <div className="text-center py-8 text-gray-400">
                   <div className="text-4xl mb-2">📭</div>
-                  <p className="text-sm">No tasks here</p>
-                  <p className="text-xs">Drag tasks from other columns</p>
+                  <p className="text-sm">
+                    {currentGroup ? 'No tasks in this group' : 'No tasks or groups here'}
+                  </p>
+                  <p className="text-xs">
+                    {currentGroup 
+                      ? 'Add tasks to this group using the "Add Task" button'
+                      : 'Drag tasks or groups from other columns'
+                    }
+                  </p>
                 </div>
-              ) : (
-                filteredTasks.map((task, index) => (
-                  <TaskCard key={task.id} task={task} index={index} />
-                ))
-              )}
+              ) : null}
               {provided.placeholder}
             </div>
           )}
@@ -604,12 +999,32 @@ const ProjectTasks = ({ project }) => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${currentGroup ? 'bg-blue-50 p-4 rounded-lg border-2 border-blue-200' : ''}`}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Tasks</h2>
-          <p className="text-gray-600">Manage and track project tasks</p>
+          <div className="flex items-center space-x-3">
+            {currentGroup && (
+              <button
+                onClick={() => setCurrentGroup(null)}
+                className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 transition-colors"
+              >
+                <ChevronLeft size={16} />
+                <span className="text-sm">Back to Groups</span>
+              </button>
+            )}
+            <h2 className="text-2xl font-bold text-gray-900">
+              {currentGroup ? `Tasks in ${currentGroup.name}` : 'Tasks'}
+            </h2>
+          </div>
+          <p className="text-gray-600">
+            {currentGroup 
+              ? `Manage tasks within the "${currentGroup.name}" group`
+              : user.role === '3d-designer' 
+                ? 'View and update your assigned tasks' 
+                : 'Manage and track project tasks'
+            }
+          </p>
         </div>
         
         <div className="flex items-center space-x-3">
@@ -623,8 +1038,30 @@ const ProjectTasks = ({ project }) => {
           
           {(user.role === 'admin' || user.role === 'manager') && (
             <>
+              {!currentGroup && (
+                <button
+                  onClick={() => {
+                    setSelectedGroup(null);
+                    setIsGroupModalOpen(true);
+                  }}
+                  className="btn-primary flex items-center space-x-2"
+                >
+                  <Plus size={16} />
+                  <span>Add Group</span>
+                </button>
+              )}
               <button
-                onClick={() => setIsAddModalOpen(true)}
+                onClick={() => {
+                  console.log('Add Task button clicked - currentGroup:', currentGroup);
+                  console.log('Add Task button clicked - currentGroup?.id:', currentGroup?.id);
+                  const updatedNewTask = { 
+                    ...newTask, 
+                    groupId: currentGroup?.id || '' 
+                  };
+                  console.log('Add Task button clicked - updatedNewTask:', updatedNewTask);
+                  setNewTask(updatedNewTask);
+                  setIsAddModalOpen(true);
+                }}
                 className="btn-primary flex items-center space-x-2"
               >
                 <Plus size={16} />
@@ -651,19 +1088,25 @@ const ProjectTasks = ({ project }) => {
         </div>
       </div>
 
-             {/* Drag & Drop Instructions */}
-       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-         <div className="flex items-center space-x-2">
-           <div className="text-blue-600">💡</div>
-           <div>
-             <h4 className="font-medium text-blue-900">Quick Tip</h4>
-             <p className="text-sm text-blue-700">
-               Drag and drop tasks between columns to update their status automatically. 
-               Progress will be updated based on the column: To Do (0%) → In Progress (50%) → Review (80%) → Completed (100%)
-             </p>
-           </div>
-         </div>
-       </div>
+
+
+      {/* Drag & Drop Instructions */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-center space-x-2">
+          <div className="text-blue-600">💡</div>
+          <div>
+            <h4 className="font-medium text-blue-900">Quick Tip</h4>
+            <p className="text-sm text-blue-700">
+              {currentGroup
+                ? 'Drag and drop tasks between columns to update their status. Tasks created here will be part of this group.'
+                : user.role === '3d-designer' 
+                  ? 'Drag and drop your assigned tasks between columns to update their status. You can also edit tasks to update progress and time spent.'
+                  : 'Drag and drop tasks and groups between columns to update their status automatically. Progress will be updated based on the column: To Do (0%) → In Progress (50%) → Review (80%) → Completed (100%)'
+              }
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* Task Board */}
       <DragDropContext onDragEnd={handleDragEnd}>
@@ -696,14 +1139,14 @@ const ProjectTasks = ({ project }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description *
+                  Description
                 </label>
                 <textarea
                   value={newTask.description}
                   onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
                   className="input-field"
                   rows={3}
-                  placeholder="Enter task description"
+                  placeholder="Enter task description (optional)"
                 />
               </div>
 
@@ -780,6 +1223,26 @@ const ProjectTasks = ({ project }) => {
                   </select>
                 </div>
               </div>
+
+              {newTask.groupId && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Task Group
+                  </label>
+                  <select
+                    value={newTask.groupId}
+                    onChange={(e) => setNewTask({ ...newTask, groupId: e.target.value })}
+                    className="input-field"
+                  >
+                    <option value="">No group (ungrouped)</option>
+                    {project.taskGroups?.map(group => (
+                      <option key={group.id} value={group.id}>
+                        {group.name}
+                      </option>
+                    )) || []}
+                  </select>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-end space-x-3 mt-6">
@@ -821,13 +1284,14 @@ const ProjectTasks = ({ project }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description *
+                  Description
                 </label>
                 <textarea
                   value={selectedTask.description}
                   onChange={(e) => setSelectedTask({ ...selectedTask, description: e.target.value })}
                   className="input-field"
                   rows={3}
+                  placeholder="Enter task description (optional)"
                 />
               </div>
 
@@ -866,23 +1330,26 @@ const ProjectTasks = ({ project }) => {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Assign To
-                  </label>
-                  <select
-                    value={selectedTask.assignedTo}
-                    onChange={(e) => setSelectedTask({ ...selectedTask, assignedTo: e.target.value })}
-                    className="input-field"
-                  >
-                    <option value="">Select team member</option>
-                    {allUsers.map(member => (
-                      <option key={member.id} value={member.id}>
-                        {member.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {/* Hide Assign To field for 3D designers */}
+                {user.role !== '3d-designer' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Assign To
+                    </label>
+                    <select
+                      value={selectedTask.assignedTo}
+                      onChange={(e) => setSelectedTask({ ...selectedTask, assignedTo: e.target.value })}
+                      className="input-field"
+                    >
+                      <option value="">Select team member</option>
+                      {allUsers.map(member => (
+                        <option key={member.id} value={member.id}>
+                          {member.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -900,30 +1367,33 @@ const ProjectTasks = ({ project }) => {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Billing Item
-                  </label>
-                  <select
-                    value={selectedTask.billingItemId || ''}
-                    onChange={(e) => {
-                      const selectedBillingItem = project.billingItems?.find(item => item.id === e.target.value);
-                      setSelectedTask({ 
-                        ...selectedTask, 
-                        billingItemId: e.target.value,
-                        title: selectedBillingItem ? selectedBillingItem.name : selectedTask.title
-                      });
-                    }}
-                    className="input-field"
-                  >
-                    <option value="">Select billing item</option>
-                    {project.billingItems?.map(item => (
-                      <option key={item.id} value={item.id}>
-                        {item.name} - ₹{item.totalPrice}
-                      </option>
-                    )) || []}
-                  </select>
-                </div>
+                {/* Hide Billing Item field for 3D designers */}
+                {user.role !== '3d-designer' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Billing Item
+                    </label>
+                    <select
+                      value={selectedTask.billingItemId || ''}
+                      onChange={(e) => {
+                        const selectedBillingItem = project.billingItems?.find(item => item.id === e.target.value);
+                        setSelectedTask({ 
+                          ...selectedTask, 
+                          billingItemId: e.target.value,
+                          title: selectedBillingItem ? selectedBillingItem.name : selectedTask.title
+                        });
+                      }}
+                      className="input-field"
+                    >
+                      <option value="">Select billing item</option>
+                      {project.billingItems?.map(item => (
+                        <option key={item.id} value={item.id}>
+                          {item.name} - ₹{item.totalPrice}
+                        </option>
+                      )) || []}
+                    </select>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -984,6 +1454,17 @@ const ProjectTasks = ({ project }) => {
           </div>
         </div>
       )}
+
+      {/* Task Group Modal */}
+      <TaskGroupModal
+        isOpen={isGroupModalOpen}
+        onClose={() => {
+          setIsGroupModalOpen(false);
+          setSelectedGroup(null);
+        }}
+        group={selectedGroup}
+        project={project}
+      />
     </div>
   );
 };

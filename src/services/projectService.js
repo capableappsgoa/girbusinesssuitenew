@@ -118,6 +118,7 @@ export const fetchProjects = async () => {
             assignedTo: task.assigned_to,
             deadline: task.deadline,
             billingItemId: task.billing_item_id,
+            groupId: task.group_id,
             timeSpent: task.time_spent,
             createdAt: task.created_at,
             updatedAt: task.updated_at
@@ -171,7 +172,8 @@ export const fetchProjects = async () => {
             team: mappedTeamMembers,
             company: company,
             companyLogoUrl: company?.logoUrl || null,
-            companyLogoAltText: company?.logoAltText || null
+            companyLogoAltText: company?.logoAltText || null,
+            taskGroups: [] // Will be loaded separately
           };
         } catch (error) {
           console.error('Error fetching related data for project:', project.id, error);
@@ -685,6 +687,7 @@ export const fetchProjectById = async (projectId) => {
         assignedTo: task.assigned_to,
         deadline: task.deadline,
         billingItemId: task.billing_item_id,
+        groupId: task.group_id,
         timeSpent: task.time_spent,
         createdAt: task.created_at,
         updatedAt: task.updated_at
@@ -779,6 +782,7 @@ export const fetchProjectTasks = async (projectId) => {
 export const createTask = async (projectId, taskData) => {
   try {
     console.log('Creating task with data:', { projectId, taskData });
+    console.log('Creating task - taskData.groupId:', taskData.groupId);
     
     // Test connection first
     const isConnected = await testConnection();
@@ -812,6 +816,7 @@ export const createTask = async (projectId, taskData) => {
         assigned_to: taskData.assignedTo || null,
         deadline: taskData.deadline || null,
         billing_item_id: taskData.billingItemId || null,
+        group_id: taskData.groupId || null,
         time_spent: taskData.timeSpent || 0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -825,6 +830,7 @@ export const createTask = async (projectId, taskData) => {
     }
     
     console.log('Task created successfully:', data);
+    console.log('Task created - data.group_id:', data.group_id);
     
     // Map snake_case to camelCase for frontend compatibility
     const mappedTask = {
@@ -837,6 +843,7 @@ export const createTask = async (projectId, taskData) => {
       assignedTo: data.assigned_to,
       deadline: data.deadline,
       billingItemId: data.billing_item_id,
+      groupId: data.group_id,
       timeSpent: data.time_spent,
       createdAt: data.created_at,
       updatedAt: data.updated_at
@@ -1751,6 +1758,222 @@ export const fetchCompanyById = async (companyId) => {
     };
   } catch (error) {
     console.error('Failed to fetch company:', error);
+    throw error;
+  }
+}; 
+
+// ========================================
+// TASK GROUPS SERVICE FUNCTIONS
+// ========================================
+
+// Fetch task groups for a project
+export const fetchTaskGroups = async (projectId) => {
+  try {
+    const { data, error } = await supabase
+      .from(TABLES.TASK_GROUPS)
+      .select(`
+        *,
+        billing_items (
+          id,
+          name,
+          description,
+          total_price,
+          status
+        )
+      `)
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching task groups:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Failed to fetch task groups:', error);
+    throw error;
+  }
+};
+
+// Create a new task group
+export const createTaskGroup = async (projectId, groupData) => {
+  try {
+    console.log('Creating task group with data:', { projectId, groupData });
+    
+    // Test connection first
+    const isConnected = await testConnection();
+    if (!isConnected) {
+      throw new Error('Unable to connect to database. Please check your internet connection.');
+    }
+    
+    // Check if user is authenticated
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError) {
+      console.error('Authentication error:', authError);
+      throw new Error('Authentication failed. Please log in again.');
+    }
+    
+    if (!user) {
+      console.error('No authenticated user found');
+      throw new Error('You must be logged in to create task groups.');
+    }
+    
+    console.log('User authenticated:', user.id);
+    
+    // Check if task_groups table exists by trying to query it
+    const { data: tableCheck, error: tableError } = await supabase
+      .from(TABLES.TASK_GROUPS)
+      .select('id')
+      .limit(1);
+    
+    if (tableError) {
+      console.error('Task groups table error:', tableError);
+      throw new Error('Task groups table does not exist. Please run the database migration first.');
+    }
+    
+    console.log('Task groups table exists, proceeding with insert...');
+    
+    const { data, error } = await supabase
+      .from(TABLES.TASK_GROUPS)
+      .insert({
+        project_id: projectId,
+        name: groupData.name,
+        description: groupData.description || null,
+        color: groupData.color || '#3B82F6',
+        billing_item_id: groupData.billingItemId || null,
+        status: groupData.status || 'todo',
+        created_by: user.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select(`
+        *,
+        billing_items (
+          id,
+          name,
+          description,
+          total_price,
+          status
+        )
+      `)
+      .single();
+    
+    if (error) {
+      console.error('Failed to create task group:', error);
+      console.error('Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      handleSupabaseError(error);
+    }
+    
+    console.log('Task group created successfully:', data);
+    return data;
+  } catch (error) {
+    console.error('Failed to create task group:', error);
+    throw error;
+  }
+};
+
+// Update a task group
+export const updateTaskGroup = async (groupId, updates) => {
+  try {
+    console.log('Updating task group:', { groupId, updates });
+    
+    // Test connection first
+    const isConnected = await testConnection();
+    if (!isConnected) {
+      throw new Error('Unable to connect to database. Please check your internet connection.');
+    }
+    
+    // Check if user is authenticated
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError) {
+      console.error('Authentication error:', authError);
+      throw new Error('Authentication failed. Please log in again.');
+    }
+    
+    if (!user) {
+      console.error('No authenticated user found');
+      throw new Error('You must be logged in to update task groups.');
+    }
+    
+    console.log('User authenticated:', user.id);
+    
+    const { data, error } = await supabase
+      .from(TABLES.TASK_GROUPS)
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', groupId)
+      .select(`
+        *,
+        billing_items (
+          id,
+          name,
+          description,
+          total_price,
+          status
+        )
+      `)
+      .single();
+    
+    if (error) {
+      console.error('Failed to update task group:', error);
+      handleSupabaseError(error);
+    }
+    
+    console.log('Task group updated successfully:', data);
+    return data;
+  } catch (error) {
+    console.error('Failed to update task group:', error);
+    throw error;
+  }
+};
+
+// Delete a task group
+export const deleteTaskGroup = async (groupId) => {
+  try {
+    console.log('Deleting task group:', groupId);
+    
+    // Test connection first
+    const isConnected = await testConnection();
+    if (!isConnected) {
+      throw new Error('Unable to connect to database. Please check your internet connection.');
+    }
+    
+    // Check if user is authenticated
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError) {
+      console.error('Authentication error:', authError);
+      throw new Error('Authentication failed. Please log in again.');
+    }
+    
+    if (!user) {
+      console.error('No authenticated user found');
+      throw new Error('You must be logged in to delete task groups.');
+    }
+    
+    console.log('User authenticated:', user.id);
+    
+    const { error } = await supabase
+      .from(TABLES.TASK_GROUPS)
+      .delete()
+      .eq('id', groupId);
+    
+    if (error) {
+      console.error('Failed to delete task group:', error);
+      handleSupabaseError(error);
+    }
+    
+    console.log('Task group deleted successfully');
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to delete task group:', error);
     throw error;
   }
 }; 

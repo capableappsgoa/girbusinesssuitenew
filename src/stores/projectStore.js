@@ -24,7 +24,11 @@ import {
   markProjectAsPaid,
   markProjectAsUnpaid,
   updateProjectDiscount,
-  fetchCompanyById
+  fetchCompanyById,
+  fetchTaskGroups,
+  createTaskGroup as createTaskGroupService,
+  updateTaskGroup as updateTaskGroupService,
+  deleteTaskGroup as deleteTaskGroupService
 } from '../services/projectService';
 
 const useProjectStore = create(
@@ -592,7 +596,8 @@ const useProjectStore = create(
             team: project.team || [],
             tasks: project.tasks || [],
             issues: project.issues || [],
-            billingItems: project.billingItems || []
+            billingItems: project.billingItems || [],
+            taskGroups: project.taskGroups || []
           };
         }
         
@@ -822,6 +827,149 @@ const useProjectStore = create(
         } catch (error) {
           console.error('Failed to fetch company and update project:', error);
           return { success: false, error: error.message };
+        }
+      },
+
+      // Task Groups Management
+      addTaskGroup: async (projectId, groupData) => {
+        try {
+          console.log('Adding task group to project:', projectId, groupData);
+          
+          const newTaskGroup = await createTaskGroupService(projectId, groupData);
+          
+          // Update local state
+          set((state) => ({
+            projects: state.projects.map((project) =>
+              project.id === projectId
+                ? {
+                    ...project,
+                    taskGroups: [...(project.taskGroups || []), newTaskGroup]
+                  }
+                : project
+            )
+          }));
+          
+          console.log('Task group added successfully:', newTaskGroup);
+          return { success: true, taskGroup: newTaskGroup };
+        } catch (error) {
+          console.error('Failed to add task group:', error);
+          
+          // Provide user-friendly error messages
+          let errorMessage = 'Failed to add task group. Please try again.';
+          
+          if (error.message?.includes('Connection to database failed')) {
+            errorMessage = 'Connection to database failed. Please check your internet connection and try again.';
+          } else if (error.message?.includes('Authentication failed')) {
+            errorMessage = 'Authentication failed. Please log in again.';
+          } else if (error.message?.includes('Access denied')) {
+            errorMessage = 'Access denied. You may not have permission to create task groups in this project.';
+          } else if (error.message?.includes('You must be logged in')) {
+            errorMessage = 'You must be logged in to create task groups.';
+          }
+          
+          return { success: false, error: errorMessage };
+        }
+      },
+
+      updateTaskGroup: async (projectId, groupId, updates) => {
+        try {
+          console.log('Updating task group:', { projectId, groupId, updates });
+          
+          const updatedTaskGroup = await updateTaskGroupService(groupId, updates);
+          
+          // Update local state
+          set((state) => ({
+            projects: state.projects.map(project =>
+              project.id === projectId
+                ? {
+                    ...project,
+                    taskGroups: project.taskGroups?.map(group =>
+                      group.id === groupId ? updatedTaskGroup : group
+                    ) || []
+                  }
+                : project
+            )
+          }));
+          
+          console.log('Task group updated successfully:', updatedTaskGroup);
+          return { success: true, taskGroup: updatedTaskGroup };
+        } catch (error) {
+          console.error('Failed to update task group:', error);
+          
+          // Provide user-friendly error messages
+          let errorMessage = 'Failed to update task group. Please try again.';
+          
+          if (error.message?.includes('Connection to database failed')) {
+            errorMessage = 'Connection to database failed. Please check your internet connection and try again.';
+          } else if (error.message?.includes('Authentication failed')) {
+            errorMessage = 'Authentication failed. Please log in again.';
+          } else if (error.message?.includes('Access denied')) {
+            errorMessage = 'Access denied. You may not have permission to update task groups in this project.';
+          } else if (error.message?.includes('You must be logged in')) {
+            errorMessage = 'You must be logged in to update task groups.';
+          }
+          
+          return { success: false, error: errorMessage };
+        }
+      },
+
+      deleteTaskGroup: async (projectId, groupId) => {
+        try {
+          console.log('Deleting task group:', { projectId, groupId });
+          
+          await deleteTaskGroupService(groupId);
+          
+          // Update local state
+          set((state) => ({
+            projects: state.projects.map(project =>
+              project.id === projectId
+                ? {
+                    ...project,
+                    taskGroups: project.taskGroups?.filter(group => group.id !== groupId) || []
+                  }
+                : project
+            )
+          }));
+          
+          console.log('Task group deleted successfully');
+          return { success: true };
+        } catch (error) {
+          console.error('Failed to delete task group:', error);
+          
+          // Provide user-friendly error messages
+          let errorMessage = 'Failed to delete task group. Please try again.';
+          
+          if (error.message?.includes('Connection to database failed')) {
+            errorMessage = 'Connection to database failed. Please check your internet connection and try again.';
+          } else if (error.message?.includes('Authentication failed')) {
+            errorMessage = 'Authentication failed. Please log in again.';
+          } else if (error.message?.includes('Access denied')) {
+            errorMessage = 'Access denied. You may not have permission to delete task groups in this project.';
+          } else if (error.message?.includes('You must be logged in')) {
+            errorMessage = 'You must be logged in to delete task groups.';
+          }
+          
+          return { success: false, error: errorMessage };
+        }
+      },
+
+      loadTaskGroups: async (projectId) => {
+        try {
+          const taskGroups = await fetchTaskGroups(projectId);
+          
+          // Update local state
+          set((state) => ({
+            projects: state.projects.map(project =>
+              project.id === projectId
+                ? { ...project, taskGroups: taskGroups }
+                : project
+            )
+          }));
+          
+          return taskGroups;
+        } catch (error) {
+          console.error('Failed to load task groups:', error);
+          throw error;
         }
       }
     }),

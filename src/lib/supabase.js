@@ -46,7 +46,8 @@ export const TABLES = {
   TASKS: 'tasks',
   ISSUES: 'issues',
   BILLING_ITEMS: 'billing_items',
-  TEAM_MEMBERS: 'team_members'
+  TEAM_MEMBERS: 'team_members',
+  TASK_GROUPS: 'task_groups'
 };
 
 // Enhanced error handling

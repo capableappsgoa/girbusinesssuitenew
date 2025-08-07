@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useProjectStore } from '../../stores/projectStore';
 import { useAuthStore } from '../../stores/authStore';
 import {
@@ -25,10 +25,26 @@ import CompanyLogo from '../common/CompanyLogo';
 
 const ProjectDetail = () => {
   const { id } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { getProjectById, loadProject, fetchCompanyAndUpdateProject } = useProjectStore();
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState('overview');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Handle URL parameters for tab and taskId
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    const taskIdParam = searchParams.get('taskId');
+    
+    if (tabParam && ['overview', 'tasks', 'issues', 'invoice'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+    
+    // If taskId is provided, ensure we're on the tasks tab
+    if (taskIdParam && activeTab !== 'tasks') {
+      setActiveTab('tasks');
+    }
+  }, [searchParams, activeTab]);
 
   const project = getProjectById(id);
 
@@ -119,11 +135,13 @@ const ProjectDetail = () => {
   const isOverdue = daysUntilDeadline < 0 && project.status !== 'completed';
 
   const renderTabContent = () => {
+    const taskId = searchParams.get('taskId');
+    
     switch (activeTab) {
       case 'overview':
         return <ProjectOverview project={project} />;
       case 'tasks':
-        return <ProjectTasks project={project} />;
+        return <ProjectTasks project={project} taskId={taskId} />;
       case 'issues':
         return <ProjectIssues project={project} />;
       case 'invoice':
@@ -244,7 +262,10 @@ const ProjectDetail = () => {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setSearchParams({ tab: tab.id });
+                  }}
                   className={`flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm ${
                     activeTab === tab.id
                       ? 'border-blue-500 text-blue-600'

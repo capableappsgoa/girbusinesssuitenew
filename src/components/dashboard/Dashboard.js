@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useProjectStore } from '../../stores/projectStore';
 import { useAuthStore } from '../../stores/authStore';
 import OnlineStatus from './OnlineStatus';
@@ -14,9 +14,11 @@ import {
   MessageSquare,
   FileText,
   Eye,
-  Plus
+  Plus,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, isTomorrow, isYesterday, differenceInDays, parseISO } from 'date-fns';
 
 // Safe date formatting function
 const safeFormat = (dateValue, formatString) => {
@@ -43,6 +45,10 @@ const Dashboard = () => {
     getProjectBillingTotal
   } = useProjectStore();
 
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+
   const ongoingProjects = getProjectsByStatus('ongoing');
   const completedProjects = getProjectsByStatus('completed');
   const totalRevenue = projects.reduce((sum, project) => sum + getProjectBillingTotal(project.id), 0);
@@ -63,6 +69,44 @@ const Dashboard = () => {
   const userTasks = getTasksByUser(user.id);
   const userIssues = getIssuesByUser(user.id);
   const assignedProjects = projects.filter(project => project.team?.includes(user.id));
+
+  // Calendar functions
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+  const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
+  const getTasksForDate = (date) => {
+    return userTasks.filter(task => {
+      if (!task.deadline) return false;
+      try {
+        const taskDate = parseISO(task.deadline);
+        return isSameDay(taskDate, date);
+      } catch (error) {
+        return false;
+      }
+    });
+  };
+
+  const handleDateClick = (date) => {
+    const tasksForDate = getTasksForDate(date);
+    if (tasksForDate.length > 0) {
+      setSelectedDate(date);
+      setShowTaskModal(true);
+    }
+  };
+
+  const formatRelativeDate = (date) => {
+    if (isToday(date)) return 'today';
+    if (isTomorrow(date)) return 'tomorrow';
+    if (isYesterday(date)) return 'yesterday';
+    
+    const daysDiff = differenceInDays(date, new Date());
+    if (daysDiff > 0) {
+      return `${daysDiff} days left`;
+    } else {
+      return `${Math.abs(daysDiff)} days passed`;
+    }
+  };
 
   const stats = [
     {
@@ -203,24 +247,139 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* My Tasks */}
-          <div className="bg-white rounded-lg border">
-            <div className="p-4 border-b">
-              <h3 className="font-semibold text-gray-900">My Tasks</h3>
-              <p className="text-sm text-gray-600">Tasks assigned to you</p>
+        {/* Calendar */}
+        <div className="bg-white rounded-lg border">
+          <div className="p-4 border-b">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900">Work Calendar</h3>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}
+                  className="p-1 rounded hover:bg-gray-100"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span className="text-sm font-medium text-gray-700">
+                  {format(currentDate, 'MMMM yyyy')}
+                </span>
+                <button
+                  onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}
+                  className="p-1 rounded hover:bg-gray-100"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
             </div>
-            <div className="p-4">
-              {userTasks.length === 0 ? (
-                <div className="text-center py-8">
-                  <CheckCircle size={48} className="mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No tasks assigned</h3>
-                  <p className="text-gray-600">You don't have any tasks assigned yet.</p>
+          </div>
+          <div className="p-4">
+            <div className="grid grid-cols-7 gap-1">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
+                  {day}
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {userTasks.slice(0, 5).map(task => (
-                    <div key={task.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              ))}
+              {monthDays.map((day, index) => {
+                const tasksForDay = getTasksForDate(day);
+                const hasTasks = tasksForDay.length > 0;
+                const isCurrentMonth = isSameMonth(day, currentDate);
+                
+                return (
+                  <div
+                    key={index}
+                    onClick={() => handleDateClick(day)}
+                    className={`
+                      min-h-[60px] p-2 border border-gray-200 cursor-pointer hover:bg-gray-50
+                      ${!isCurrentMonth ? 'bg-gray-50 text-gray-400' : ''}
+                      ${hasTasks ? 'bg-blue-50 border-blue-300' : ''}
+                      ${isToday(day) ? 'bg-blue-100 border-blue-400' : ''}
+                    `}
+                  >
+                    <div className="text-sm font-medium">{format(day, 'd')}</div>
+                    {hasTasks && (
+                      <div className="mt-1">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mx-auto"></div>
+                        <div className="text-xs text-blue-600 mt-1">{tasksForDay.length} task{tasksForDay.length > 1 ? 's' : ''}</div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* My Issues */}
+        <div className="bg-white rounded-lg border">
+          <div className="p-4 border-b">
+            <h3 className="font-semibold text-gray-900">My Issues</h3>
+            <p className="text-sm text-gray-600">Issues assigned to you</p>
+          </div>
+          <div className="p-4">
+            {userIssues.length === 0 ? (
+              <div className="text-center py-8">
+                <AlertTriangle size={48} className="mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No issues assigned</h3>
+                <p className="text-gray-600">You don't have any issues assigned yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {userIssues.slice(0, 5).map(issue => (
+                  <div key={issue.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900">{issue.title}</h4>
+                      <p className="text-sm text-gray-600">{issue.projectName}</p>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          issue.status === 'resolved' ? 'bg-green-100 text-green-800' :
+                          issue.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
+                          issue.status === 'pending-approval' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {issue.status.replace('-', ' ')}
+                        </span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          issue.priority === 'high' ? 'bg-red-100 text-red-800' :
+                          issue.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-green-100 text-green-800'
+                        }`}>
+                          {issue.priority}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-500">{safeFormat(issue.createdAt, 'MMM dd')}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Online Status for Designers */}
+        <div className="bg-white rounded-lg border">
+          <OnlineStatus />
+        </div>
+
+        {/* Task Modal */}
+        {showTaskModal && selectedDate && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Tasks for {format(selectedDate, 'MMMM d, yyyy')}
+                </h3>
+                <button
+                  onClick={() => setShowTaskModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XCircle size={20} />
+                </button>
+              </div>
+              <div className="space-y-3">
+                {getTasksForDate(selectedDate).map(task => (
+                  <div key={task.id} className="p-3 border rounded-lg">
+                    <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <h4 className="font-medium text-gray-900">{task.title}</h4>
                         <p className="text-sm text-gray-600">{task.projectName}</p>
@@ -236,110 +395,15 @@ const Dashboard = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm text-gray-500">{safeFormat(task.deadline, 'MMM dd')}</p>
+                        <p className="text-sm text-gray-500">{formatRelativeDate(parseISO(task.deadline))}</p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* My Issues */}
-          <div className="bg-white rounded-lg border">
-            <div className="p-4 border-b">
-              <h3 className="font-semibold text-gray-900">My Issues</h3>
-              <p className="text-sm text-gray-600">Issues assigned to you</p>
-            </div>
-            <div className="p-4">
-              {userIssues.length === 0 ? (
-                <div className="text-center py-8">
-                  <AlertTriangle size={48} className="mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No issues assigned</h3>
-                  <p className="text-gray-600">You don't have any issues assigned yet.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {userIssues.slice(0, 5).map(issue => (
-                    <div key={issue.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900">{issue.title}</h4>
-                        <p className="text-sm text-gray-600">{issue.projectName}</p>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            issue.status === 'resolved' ? 'bg-green-100 text-green-800' :
-                            issue.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
-                            issue.status === 'pending-approval' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {issue.status.replace('-', ' ')}
-                          </span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            issue.priority === 'high' ? 'bg-red-100 text-red-800' :
-                            issue.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-green-100 text-green-800'
-                          }`}>
-                            {issue.priority}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-gray-500">{safeFormat(issue.createdAt, 'MMM dd')}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Assigned Projects */}
-        <div className="bg-white rounded-lg border">
-          <div className="p-4 border-b">
-            <h3 className="font-semibold text-gray-900">My Projects</h3>
-            <p className="text-sm text-gray-600">Projects you're working on</p>
-          </div>
-          <div className="p-4">
-            {assignedProjects.length === 0 ? (
-              <div className="text-center py-8">
-                <FileText size={48} className="mx-auto text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No projects assigned</h3>
-                <p className="text-gray-600">You haven't been assigned to any projects yet.</p>
-              </div>
-            ) : (
-              <div className="grid gap-4">
-                {assignedProjects.map(project => (
-                  <div key={project.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex-1">
-                      <h4 className="font-medium text-gray-900">{project.name}</h4>
-                      <p className="text-sm text-gray-600">{project.client}</p>
-                      <div className="flex items-center space-x-4 mt-2">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          project.status === 'completed' ? 'bg-green-100 text-green-800' :
-                          project.status === 'ongoing' ? 'bg-blue-100 text-blue-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {project.status}
-                        </span>
-                        <span className="text-xs text-gray-500">Deadline: {safeFormat(project.deadline, 'MMM dd, yyyy')}</span>
-                      </div>
-                    </div>
-                                         <div className="text-right">
-                       <p className="text-sm font-medium text-gray-900">{project.type} Project</p>
-                       <p className="text-xs text-gray-500">{project.status}</p>
-                     </div>
                   </div>
                 ))}
               </div>
-            )}
+            </div>
           </div>
-        </div>
-
-        {/* Online Status for Designers */}
-        <div className="bg-white rounded-lg border">
-          <OnlineStatus />
-        </div>
+        )}
       </div>
     );
   }

@@ -8,7 +8,7 @@ const InvoiceGenerator = ({ project, discount = 0 }) => {
 
   const captureFullScreenshot = async () => {
     if (!invoiceRef.current) return;
-    
+
     setIsGenerating(true);
     try {
       // Import html2canvas dynamically
@@ -620,10 +620,10 @@ const InvoiceGenerator = ({ project, discount = 0 }) => {
         // Calculate total amount with discount
         const totalAmount = (project?.billingItems?.reduce((total, item) => total + (item.totalPrice || 0), 0) || 0) * (1 - (discount || 0) / 100);
         const formattedTotal = new Intl.NumberFormat('en-IN', {
-          style: 'currency',
-          currency: 'INR',
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
         }).format(totalAmount);
         
         const viewerWindow = window.open('', '_blank');
@@ -1423,7 +1423,7 @@ const InvoiceGenerator = ({ project, discount = 0 }) => {
                   <div className="flex items-center space-x-3 text-gray-600">
                     <Globe size={16} className="text-yellow-600" />
                     <span className="font-medium">{project.company.website}</span>
-                  </div>
+              </div>
                 )}
                 {project?.company?.industry && (
                   <div className="flex items-center space-x-3 text-gray-600">
@@ -1447,13 +1447,13 @@ const InvoiceGenerator = ({ project, discount = 0 }) => {
                 <div className="text-sm text-gray-600 font-medium mb-2 flex items-center justify-center">
                   <Calendar size={16} className="mr-2 text-yellow-600" />
                   Invoice Date
-                </div>
+            </div>
                 <div className="font-bold text-lg text-gray-900">{new Date().toLocaleDateString('en-IN', {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric'
                 })}</div>
-              </div>
+            </div>
               <div className="text-center">
                 <div className="text-sm text-gray-600 font-medium mb-2 flex items-center justify-center">
                   <Calendar size={16} className="mr-2 text-yellow-600" />
@@ -1535,10 +1535,10 @@ const InvoiceGenerator = ({ project, discount = 0 }) => {
                       maximumFractionDigits: 0,
                     }).format(project?.billingItems?.reduce((total, item) => total + (item.totalPrice || 0), 0) || 0)}
                   </span>
-                </div>
-                
-                {discount > 0 && (
-                  <>
+              </div>
+              
+              {discount > 0 && (
+                <>
                     <div className="flex justify-between text-gray-700">
                       <span className="font-semibold text-lg">Discount ({discount}%):</span>
                       <span className="text-red-600 font-bold text-lg">
@@ -1549,13 +1549,13 @@ const InvoiceGenerator = ({ project, discount = 0 }) => {
                           maximumFractionDigits: 0,
                         }).format((project?.billingItems?.reduce((total, item) => total + (item.totalPrice || 0), 0) || 0) * discount / 100)}
                       </span>
-                    </div>
-                  </>
-                )}
-                
+                  </div>
+                </>
+              )}
+              
                 <div className="border-t-4 border-yellow-400 pt-4">
                   <div className="flex justify-between text-2xl font-bold text-gray-900">
-                    <span>Total:</span>
+                  <span>Total:</span>
                     <span className="text-yellow-600">
                       {new Intl.NumberFormat('en-IN', {
                         style: 'currency',

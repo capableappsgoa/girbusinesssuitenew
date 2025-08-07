@@ -12,6 +12,7 @@ import Settings from './components/Settings';
 import Companies from './components/companies/Companies';
 import Revenue from './components/revenue/Revenue';
 import InvoicePage from './components/invoice/InvoicePage';
+import TasksPage from './components/dashboard/TasksPage';
 import Layout from './components/layout/Layout';
 import './App.css';
 
@@ -120,6 +121,9 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />
+              {user?.role === 'designer' && (
+                <Route path="/tasks" element={<TasksPage />} />
+              )}
               {user?.role === 'admin' && (
                 <>
                   <Route path="/companies" element={<Companies />} />
