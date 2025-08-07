@@ -28,7 +28,9 @@ import {
   fetchTaskGroups,
   createTaskGroup as createTaskGroupService,
   updateTaskGroup as updateTaskGroupService,
-  deleteTaskGroup as deleteTaskGroupService
+  deleteTaskGroup as deleteTaskGroupService,
+  updateProjectAdvance,
+  getProjectAdvance
 } from '../services/projectService';
 
 const useProjectStore = create(
@@ -970,6 +972,65 @@ const useProjectStore = create(
         } catch (error) {
           console.error('Failed to load task groups:', error);
           throw error;
+        }
+      },
+
+      // Advance Payment Management
+      updateProjectAdvance: async (projectId, advanceData) => {
+        try {
+          console.log('Updating project advance payment:', { projectId, advanceData });
+          
+          const updatedProject = await updateProjectAdvance(projectId, advanceData);
+          
+          // Update local state
+          set((state) => ({
+            projects: state.projects.map(project =>
+              project.id === projectId
+                ? { 
+                    ...project, 
+                    advanceAmount: advanceData.advanceAmount || 0,
+                    advancePaymentDate: advanceData.advancePaymentDate,
+                    advancePaymentMethod: advanceData.advancePaymentMethod || 'cash',
+                    advanceNotes: advanceData.advanceNotes
+                  }
+                : project
+            )
+          }));
+          
+          console.log('Project advance payment updated successfully:', updatedProject);
+          return { success: true, project: updatedProject };
+        } catch (error) {
+          console.error('Failed to update project advance payment:', error);
+          
+          // Provide user-friendly error messages
+          let errorMessage = 'Failed to update advance payment. Please try again.';
+          
+          if (error.message?.includes('Connection to database failed')) {
+            errorMessage = 'Connection to database failed. Please check your internet connection and try again.';
+          } else if (error.message?.includes('Authentication failed')) {
+            errorMessage = 'Authentication failed. Please log in again.';
+          } else if (error.message?.includes('Access denied')) {
+            errorMessage = 'Access denied. You may not have permission to update advance payments for this project.';
+          } else if (error.message?.includes('You must be logged in')) {
+            errorMessage = 'You must be logged in to update advance payments.';
+          }
+          
+          return { success: false, error: errorMessage };
+        }
+      },
+
+      getProjectAdvance: async (projectId) => {
+        try {
+          const advanceData = await getProjectAdvance(projectId);
+          return advanceData;
+        } catch (error) {
+          console.error('Failed to get project advance payment:', error);
+          return {
+            advanceAmount: 0,
+            advancePaymentDate: null,
+            advancePaymentMethod: 'cash',
+            advanceNotes: null
+          };
         }
       }
     }),

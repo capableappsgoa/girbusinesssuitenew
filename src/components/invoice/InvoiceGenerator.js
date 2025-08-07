@@ -1553,16 +1553,30 @@ const InvoiceGenerator = ({ project, discount = 0 }) => {
                 </>
               )}
               
+              {project?.advanceAmount > 0 && (
+                <div className="flex justify-between text-gray-700">
+                  <span className="font-semibold text-lg">Advance Payment:</span>
+                  <span className="text-blue-600 font-bold text-lg">
+                    -{new Intl.NumberFormat('en-IN', {
+                      style: 'currency',
+                      currency: 'INR',
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    }).format(project.advanceAmount)}
+                  </span>
+                </div>
+              )}
+              
                 <div className="border-t-4 border-yellow-400 pt-4">
                   <div className="flex justify-between text-2xl font-bold text-gray-900">
-                  <span>Total:</span>
+                  <span>Total Due:</span>
                     <span className="text-yellow-600">
                       {new Intl.NumberFormat('en-IN', {
                         style: 'currency',
                         currency: 'INR',
                         minimumFractionDigits: 0,
                         maximumFractionDigits: 0,
-                      }).format((project?.billingItems?.reduce((total, item) => total + (item.totalPrice || 0), 0) || 0) * (1 - discount / 100))}
+                      }).format((project?.billingItems?.reduce((total, item) => total + (item.totalPrice || 0), 0) || 0) * (1 - discount / 100) - (project?.advanceAmount || 0))}
                     </span>
                   </div>
                 </div>

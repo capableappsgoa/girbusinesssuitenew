@@ -27,6 +27,7 @@ import toast from 'react-hot-toast';
 import InvoiceGenerator from '../invoice/InvoiceGenerator';
 import CompanyLogo from '../common/CompanyLogo';
 import BillingExcelInterface from './BillingExcelInterface';
+import AdvancePaymentModal from './AdvancePaymentModal';
 
 const ProjectInvoice = ({ project }) => {
   const navigate = useNavigate();
@@ -50,6 +51,7 @@ const ProjectInvoice = ({ project }) => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [discount, setDiscount] = useState(project?.discountPercentage || invoiceDiscountPercentage || 0);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [isAdvanceModalOpen, setIsAdvanceModalOpen] = useState(false);
   const [newBillingItem, setNewBillingItem] = useState({
     name: '',
     description: '',
@@ -61,7 +63,9 @@ const ProjectInvoice = ({ project }) => {
   const completedTotal = getProjectSpentTotal(project?.id); // This gets completed items
   const remainingTotal = getProjectRemainingTotal(project?.id); // Remaining items (pending + in-progress)
   const discountAmount = (billingTotal * discount) / 100;
-  const finalTotal = billingTotal - discountAmount;
+  const advanceAmount = project?.advanceAmount || 0;
+  const subtotalAfterDiscount = billingTotal - discountAmount;
+  const finalTotal = subtotalAfterDiscount - advanceAmount;
 
   // Synchronize discount with store and project
   useEffect(() => {
@@ -313,13 +317,65 @@ const ProjectInvoice = ({ project }) => {
             </div>
             <div className="border-t border-yellow-200 pt-2">
               <div className="flex items-center justify-between">
-                <span className="text-gray-900 font-bold text-lg">Final Total:</span>
-                <span className="font-bold text-green-600 text-xl">₹{finalTotal.toLocaleString()}</span>
+                <span className="text-gray-900 font-bold text-lg">Subtotal After Discount:</span>
+                <span className="font-bold text-green-600 text-xl">₹{subtotalAfterDiscount.toLocaleString()}</span>
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* Advance Payment Section */}
+      <div className="bg-white rounded-lg border p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <DollarSign size={20} className="text-gray-500" />
+              <h3 className="font-semibold text-gray-900">Advance Payment</h3>
+            </div>
+            <button
+              onClick={() => setIsAdvanceModalOpen(true)}
+              className="btn-primary flex items-center space-x-2"
+            >
+              <Plus size={16} />
+              <span>Manage Advance</span>
+            </button>
+          </div>
+          
+          {advanceAmount > 0 ? (
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-300 rounded-lg p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-gray-700 font-medium">Advance Received:</span>
+                <span className="font-bold text-blue-600 text-lg">₹{advanceAmount.toLocaleString()}</span>
+              </div>
+              {project?.advancePaymentDate && (
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-700 font-medium">Payment Date:</span>
+                  <span className="text-gray-600">{new Date(project.advancePaymentDate).toLocaleDateString()}</span>
+                </div>
+              )}
+              {project?.advancePaymentMethod && (
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-700 font-medium">Payment Method:</span>
+                  <span className="text-gray-600 capitalize">{project.advancePaymentMethod.replace('_', ' ')}</span>
+                </div>
+              )}
+              <div className="border-t border-blue-200 pt-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-900 font-bold text-lg">Final Amount Due:</span>
+                  <span className="font-bold text-green-600 text-xl">₹{finalTotal.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <div className="text-center text-gray-500">
+                <DollarSign size={24} className="mx-auto mb-2 text-gray-400" />
+                <p className="text-sm">No advance payment recorded</p>
+                <p className="text-xs text-gray-400 mt-1">Click "Manage Advance" to add advance payment</p>
+              </div>
+            </div>
+          )}
+        </div>
 
       {/* Excel-like Billing Interface */}
       <BillingExcelInterface 
@@ -612,6 +668,13 @@ const ProjectInvoice = ({ project }) => {
           </div>
         </div>
       )}
+
+      {/* Advance Payment Modal */}
+      <AdvancePaymentModal
+        isOpen={isAdvanceModalOpen}
+        onClose={() => setIsAdvanceModalOpen(false)}
+        project={project}
+      />
     </div>
   );
 };

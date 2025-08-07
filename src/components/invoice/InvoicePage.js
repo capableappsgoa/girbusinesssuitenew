@@ -78,7 +78,9 @@ const InvoicePage = () => {
         return sum + (unitPrice * quantity);
       }, 0);
       const discountAmount = (subtotal * discountPercentage) / 100;
-      const total = subtotal - discountAmount;
+      const subtotalAfterDiscount = subtotal - discountAmount;
+      const advanceAmount = project.advanceAmount || 0;
+      const total = subtotalAfterDiscount - advanceAmount;
 
       // Generate dates safely
       const now = new Date();
@@ -90,6 +92,7 @@ const InvoicePage = () => {
         subtotal,
         discountAmount,
         discountPercentage,
+        advanceAmount,
         total,
         invoiceNumber: `INV-${Date.now()}`,
         invoiceDate: formatDate(now),
@@ -778,8 +781,14 @@ const InvoicePage = () => {
                        <span className="text-sm font-medium" style={{ color: '#FFD700' }}>-${invoiceData.discountAmount.toFixed(2)}</span>
                      </div>
                    )}
+                   {invoiceData.advanceAmount > 0 && (
+                     <div className="flex justify-between py-3 border-b border-yellow-400">
+                       <span className="text-sm font-medium" style={{ color: '#FFD700' }}>Advance Payment:</span>
+                       <span className="text-sm font-medium" style={{ color: '#FFD700' }}>-${invoiceData.advanceAmount.toFixed(2)}</span>
+                     </div>
+                   )}
                    <div className="flex justify-between py-4">
-                     <span className="text-xl font-bold" style={{ color: '#FFD700' }}>Total:</span>
+                     <span className="text-xl font-bold" style={{ color: '#FFD700' }}>Total Due:</span>
                      <span className="text-xl font-bold" style={{ color: '#FFD700' }}>${invoiceData.total.toFixed(2)}</span>
                    </div>
                 </div>

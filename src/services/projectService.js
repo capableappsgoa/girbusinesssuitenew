@@ -174,7 +174,11 @@ export const fetchProjects = async () => {
             company: company,
             companyLogoUrl: company?.logoUrl || null,
             companyLogoAltText: company?.logoAltText || null,
-            taskGroups: [] // Will be loaded separately
+            taskGroups: [], // Will be loaded separately
+            advanceAmount: project.advance_amount || 0,
+            advancePaymentDate: project.advance_payment_date,
+            advancePaymentMethod: project.advance_payment_method || 'cash',
+            advanceNotes: project.advance_notes
           };
         } catch (error) {
           console.error('Error fetching related data for project:', project.id, error);
@@ -741,7 +745,11 @@ export const fetchProjectById = async (projectId) => {
         tasks: mappedTasks,
         issues: mappedIssues,
         billingItems: mappedBillingItems,
-        team: mappedTeamMembers
+        team: mappedTeamMembers,
+        advanceAmount: data.advance_amount || 0,
+        advancePaymentDate: data.advance_payment_date,
+        advancePaymentMethod: data.advance_payment_method || 'cash',
+        advanceNotes: data.advance_notes
       };
     } catch (error) {
       console.error('Error fetching related data for project:', projectId, error);
@@ -1735,6 +1743,93 @@ export const updateProjectDiscount = async (projectId, discountPercentage) => {
     throw error;
   }
 }; 
+
+// Update project advance payment
+export const updateProjectAdvance = async (projectId, advanceData) => {
+  try {
+    console.log('Updating project advance payment:', { projectId, advanceData });
+    
+    // Test connection first
+    const isConnected = await testConnection();
+    if (!isConnected) {
+      throw new Error('Unable to connect to database. Please check your internet connection.');
+    }
+    
+    // Check if user is authenticated
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError) {
+      console.error('Authentication error:', authError);
+      throw new Error('Authentication failed. Please log in again.');
+    }
+    
+    if (!user) {
+      console.error('No authenticated user found');
+      throw new Error('You must be logged in to update advance payments.');
+    }
+    
+    console.log('User authenticated:', user.id);
+    
+    const { data, error } = await supabase
+      .from(TABLES.PROJECTS)
+      .update({
+        advance_amount: advanceData.advanceAmount || 0,
+        advance_payment_date: advanceData.advancePaymentDate || null,
+        advance_payment_method: advanceData.advancePaymentMethod || 'cash',
+        advance_notes: advanceData.advanceNotes || null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', projectId)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Failed to update project advance payment:', error);
+      throw error;
+    }
+    
+    console.log('Project advance payment updated successfully:', data);
+    
+    // Map snake_case to camelCase for frontend compatibility
+    const mappedProject = {
+      ...data,
+      advanceAmount: data.advance_amount || 0,
+      advancePaymentDate: data.advance_payment_date,
+      advancePaymentMethod: data.advance_payment_method || 'cash',
+      advanceNotes: data.advance_notes
+    };
+    
+    return mappedProject;
+  } catch (error) {
+    console.error('Error updating project advance payment:', error);
+    throw error;
+  }
+};
+
+// Get project advance payment
+export const getProjectAdvance = async (projectId) => {
+  try {
+    const { data, error } = await supabase
+      .from(TABLES.PROJECTS)
+      .select('advance_amount, advance_payment_date, advance_payment_method, advance_notes')
+      .eq('id', projectId)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching project advance payment:', error);
+      throw error;
+    }
+    
+    return {
+      advanceAmount: data.advance_amount || 0,
+      advancePaymentDate: data.advance_payment_date,
+      advancePaymentMethod: data.advance_payment_method || 'cash',
+      advanceNotes: data.advance_notes
+    };
+  } catch (error) {
+    console.error('Failed to fetch project advance payment:', error);
+    throw error;
+  }
+};
 
 // Fetch company data by ID
 export const fetchCompanyById = async (companyId) => {
