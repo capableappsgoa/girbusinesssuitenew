@@ -50,7 +50,7 @@ function createWindow() {
     });
 
     // Load the app
-    const startUrl = isDev ? 'http://localhost:3000' : 'https://girbusinesssuitenew.vercel.app/';
+    const startUrl = 'https://girbusinesssuitenew.vercel.app/';
     
     mainWindow.loadURL(startUrl);
 
