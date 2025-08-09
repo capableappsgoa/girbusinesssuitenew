@@ -2088,3 +2088,34 @@ export const deleteTaskGroup = async (groupId) => {
     throw error;
   }
 }; 
+
+// Push subscriptions (Supabase)
+export const savePushSubscription = async (userId, subscription) => {
+  try {
+    const { endpoint, keys } = subscription || {};
+    if (!endpoint || !keys) throw new Error('Invalid subscription');
+    const { p256dh, auth } = keys;
+    // Upsert by endpoint
+    const { error } = await supabase
+      .from('push_subscriptions')
+      .upsert({ user_id: userId, endpoint, p256dh, auth }, { onConflict: 'endpoint' });
+    if (error) throw error;
+    return true;
+  } catch (e) {
+    console.error('savePushSubscription failed', e);
+    return false;
+  }
+};
+
+export const listPushSubscriptions = async (userId) => {
+  try {
+    const query = supabase.from('push_subscriptions').select('*');
+    if (userId) query.eq('user_id', userId);
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  } catch (e) {
+    console.error('listPushSubscriptions failed', e);
+    return [];
+  }
+}; 

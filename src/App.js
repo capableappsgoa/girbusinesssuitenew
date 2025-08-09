@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './stores/authStore';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
+import { initNotifications } from './services/notificationService';
 import LoginPage from './components/auth/LoginPage';
 import Dashboard from './components/dashboard/Dashboard';
 import Projects from './components/projects/Projects';
@@ -68,6 +69,25 @@ function App() {
 
     return () => clearTimeout(timer);
   }, [checkAuth]);
+
+  // Initialize desktop notifications once
+  useEffect(() => {
+    initNotifications();
+  }, []);
+
+  // Initialize web push subscription for browser
+  useEffect(() => {
+    (async () => {
+      if (!isAuthenticated) return;
+      try {
+        const { subscribeToPush, sendSubscriptionToServer } = await import('./services/pushService');
+        const sub = await subscribeToPush();
+        if (sub) await sendSubscriptionToServer(sub);
+      } catch (e) {
+        console.error('Push init failed', e);
+      }
+    })();
+  }, [isAuthenticated]);
 
   // Debug authentication state
   console.log('App.js - Auth state:', { user, isAuthenticated });

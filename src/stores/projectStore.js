@@ -32,6 +32,7 @@ import {
   updateProjectAdvance,
   getProjectAdvance
 } from '../services/projectService';
+import { notify, pushViaServer } from '../services/notificationService';
 
 const useProjectStore = create(
   persist(
@@ -55,6 +56,7 @@ const useProjectStore = create(
         try {
           const projects = await fetchProjects();
           set({ projects, isLoading: false });
+          notify({ title: 'Projects Loaded', body: `Loaded ${projects.length} project(s)` });
         } catch (error) {
           console.error('Failed to load projects:', error);
           set({ isLoading: false });
@@ -107,6 +109,8 @@ const useProjectStore = create(
             projects: [newProject, ...state.projects],
             isLoading: false
           }));
+          notify({ title: 'Project Created', body: `${newProject.name} created successfully` });
+          pushViaServer({ title: 'Project Created', body: `${newProject.name} created`, data: { url: `/projects/${newProject.id}` } });
           return newProject;
         } catch (error) {
           console.error('Failed to create project:', error);
@@ -128,6 +132,8 @@ const useProjectStore = create(
             ),
             isLoading: false
           }));
+          notify({ title: 'Project Updated', body: `${updatedProject.name} updated successfully` });
+          pushViaServer({ title: 'Project Updated', body: `${updatedProject.name} updated`, data: { url: `/projects/${updatedProject.id}` } });
           return { success: true, project: updatedProject };
         } catch (error) {
           console.error('Failed to update project:', error);
@@ -155,6 +161,8 @@ const useProjectStore = create(
             projects: state.projects.filter(project => project.id !== projectId),
             isLoading: false
           }));
+          notify({ title: 'Project Deleted', body: `Project removed successfully` });
+          pushViaServer({ title: 'Project Deleted', body: `A project was removed` });
         } catch (error) {
           console.error('Failed to delete project:', error);
           set({ isLoading: false });
@@ -184,6 +192,8 @@ const useProjectStore = create(
             )
           }));
           
+          notify({ title: 'Discount Updated', body: `Project discount set to ${discountPercentage}%` });
+          pushViaServer({ title: 'Discount Updated', body: `Discount set to ${discountPercentage}%` });
           return { success: true, project: updatedProject };
         } catch (error) {
           console.error('Failed to update project discount:', error);
@@ -194,8 +204,6 @@ const useProjectStore = create(
       // Billing Items Management
       addBillingItem: async (projectId, billingItemData) => {
         try {
-          console.log('Adding billing item to project:', projectId, billingItemData);
-          
           const newBillingItem = await createBillingItemService(projectId, billingItemData);
           
           // Update local state
@@ -210,32 +218,16 @@ const useProjectStore = create(
             )
           }));
           
-          console.log('Billing item added successfully:', newBillingItem);
+          notify({ title: 'Billing Item Added', body: `${newBillingItem.name || 'Item'} added` });
+          pushViaServer({ title: 'Billing Item Added', body: `${newBillingItem.name || 'Item'} added`, data: { url: `/projects/${projectId}` } });
           return { success: true, billingItem: newBillingItem };
         } catch (error) {
-          console.error('Failed to add billing item:', error);
-          
-          // Provide user-friendly error messages
-          let errorMessage = 'Failed to add billing item. Please try again.';
-          
-          if (error.message?.includes('Connection to database failed')) {
-            errorMessage = 'Connection to database failed. Please check your internet connection and try again.';
-          } else if (error.message?.includes('Authentication failed')) {
-            errorMessage = 'Authentication failed. Please log in again.';
-          } else if (error.message?.includes('Access denied')) {
-            errorMessage = 'Access denied. You may not have permission to create billing items in this project.';
-          } else if (error.message?.includes('You must be logged in')) {
-            errorMessage = 'You must be logged in to create billing items.';
-          }
-          
-          return { success: false, error: errorMessage };
+          return { success: false, error: 'Failed to add billing item. Please try again.' };
         }
       },
 
       updateBillingItem: async (projectId, billingItemId, updates) => {
         try {
-          console.log('Updating billing item:', { projectId, billingItemId, updates });
-          
           const updatedBillingItem = await updateBillingItemService(billingItemId, updates);
           
           // Update local state
@@ -252,32 +244,16 @@ const useProjectStore = create(
             )
           }));
           
-          console.log('Billing item updated successfully:', updatedBillingItem);
+          notify({ title: 'Billing Item Updated', body: `${updatedBillingItem.name || 'Item'} updated` });
+          pushViaServer({ title: 'Billing Item Updated', body: `${updatedBillingItem.name || 'Item'} updated`, data: { url: `/projects/${projectId}` } });
           return { success: true, billingItem: updatedBillingItem };
         } catch (error) {
-          console.error('Failed to update billing item:', error);
-          
-          // Provide user-friendly error messages
-          let errorMessage = 'Failed to update billing item. Please try again.';
-          
-          if (error.message?.includes('Connection to database failed')) {
-            errorMessage = 'Connection to database failed. Please check your internet connection and try again.';
-          } else if (error.message?.includes('Authentication failed')) {
-            errorMessage = 'Authentication failed. Please log in again.';
-          } else if (error.message?.includes('Access denied')) {
-            errorMessage = 'Access denied. You may not have permission to update billing items in this project.';
-          } else if (error.message?.includes('You must be logged in')) {
-            errorMessage = 'You must be logged in to update billing items.';
-          }
-          
-          return { success: false, error: errorMessage };
+          return { success: false, error: 'Failed to update billing item. Please try again.' };
         }
       },
 
       deleteBillingItem: async (projectId, billingItemId) => {
         try {
-          console.log('Deleting billing item:', { projectId, billingItemId });
-          
           await deleteBillingItemService(billingItemId);
           
           // Update local state
@@ -292,33 +268,17 @@ const useProjectStore = create(
             )
           }));
           
-          console.log('Billing item deleted successfully');
+          notify({ title: 'Billing Item Deleted', body: `Item deleted successfully` });
+          pushViaServer({ title: 'Billing Item Deleted', body: `Item deleted`, data: { url: `/projects/${projectId}` } });
           return { success: true };
         } catch (error) {
-          console.error('Failed to delete billing item:', error);
-          
-          // Provide user-friendly error messages
-          let errorMessage = 'Failed to delete billing item. Please try again.';
-          
-          if (error.message?.includes('Connection to database failed')) {
-            errorMessage = 'Connection to database failed. Please check your internet connection and try again.';
-          } else if (error.message?.includes('Authentication failed')) {
-            errorMessage = 'Authentication failed. Please log in again.';
-          } else if (error.message?.includes('Access denied')) {
-            errorMessage = 'Access denied. You may not have permission to delete billing items in this project.';
-          } else if (error.message?.includes('You must be logged in')) {
-            errorMessage = 'You must be logged in to delete billing items.';
-          }
-          
-          return { success: false, error: errorMessage };
+          return { success: false, error: 'Failed to delete billing item. Please try again.' };
         }
       },
 
       // Enhanced Task Management
       addTask: async (projectId, taskData) => {
         try {
-          console.log('Adding task to project:', projectId, taskData);
-          
           const newTask = await createTaskService(projectId, taskData);
           
           // Update local state
@@ -333,48 +293,17 @@ const useProjectStore = create(
             )
           }));
           
-          console.log('Task added successfully:', newTask);
+          notify({ title: 'Task Created', body: `${newTask.title || 'Task'} added` });
+          pushViaServer({ title: 'Task Created', body: `${newTask.title || 'Task'} added`, data: { url: `/projects/${projectId}?tab=tasks` } });
           return { success: true, task: newTask };
         } catch (error) {
-          console.error('Failed to add task:', error);
-          
-          // Provide user-friendly error messages
-          let errorMessage = 'Failed to add task. Please try again.';
-          
-          if (error.message?.includes('Connection to database failed')) {
-            errorMessage = 'Connection to database failed. Please check your internet connection and try again.';
-          } else if (error.message?.includes('Authentication failed')) {
-            errorMessage = 'Authentication failed. Please log in again.';
-          } else if (error.message?.includes('Access denied')) {
-            errorMessage = 'Access denied. You may not have permission to create tasks in this project.';
-          } else if (error.message?.includes('You must be logged in')) {
-            errorMessage = 'You must be logged in to create tasks.';
-          }
-          
-          return { success: false, error: errorMessage };
+          return { success: false, error: 'Failed to add task. Please try again.' };
         }
       },
 
       updateTask: async (projectId, taskId, updates) => {
         try {
-          console.log('Updating task:', { projectId, taskId, updates });
-          
-          // Map updates to snake_case for database
-          const updatesForDB = {
-            ...updates,
-            assigned_to: updates.assignedTo !== undefined ? updates.assignedTo : undefined,
-            billing_item_id: updates.billingItemId !== undefined ? updates.billingItemId : undefined,
-            time_spent: updates.timeSpent !== undefined ? updates.timeSpent : undefined
-          };
-          
-          // Remove camelCase properties that shouldn't go to DB
-          delete updatesForDB.assignedTo;
-          delete updatesForDB.billingItemId;
-          delete updatesForDB.timeSpent;
-          
-          console.log('Updates for database:', updatesForDB);
-
-          const updatedTask = await updateTaskService(taskId, updatesForDB);
+          const updatedTask = await updateTaskService(taskId, updates);
           
           // Update local state
           set((state) => ({
@@ -390,25 +319,11 @@ const useProjectStore = create(
             )
           }));
           
-          console.log('Task updated successfully:', updatedTask);
+          notify({ title: 'Task Updated', body: `${updatedTask.title || 'Task'} updated` });
+          pushViaServer({ title: 'Task Updated', body: `${updatedTask.title || 'Task'} updated`, data: { url: `/projects/${projectId}?tab=tasks` } });
           return { success: true, task: updatedTask };
         } catch (error) {
-          console.error('Failed to update task:', error);
-          
-          // Provide user-friendly error messages
-          let errorMessage = 'Failed to update task. Please try again.';
-          
-          if (error.message?.includes('Connection to database failed')) {
-            errorMessage = 'Connection to database failed. Please check your internet connection and try again.';
-          } else if (error.message?.includes('Authentication failed')) {
-            errorMessage = 'Authentication failed. Please log in again.';
-          } else if (error.message?.includes('Access denied')) {
-            errorMessage = 'Access denied. You may not have permission to update this task. Only task assignees and project admins can update tasks.';
-          } else if (error.message?.includes('You must be logged in')) {
-            errorMessage = 'You must be logged in to update tasks.';
-          }
-          
-          return { success: false, error: errorMessage };
+          return { success: false, error: 'Failed to update task. Please try again.' };
         }
       },
 
@@ -443,7 +358,6 @@ const useProjectStore = create(
       addIssue: async (projectId, issueData) => {
         set({ isLoading: true });
         try {
-          // Prepare issue data for database (map to snake_case where needed)
           const issueDataForDB = {
             title: issueData.title,
             description: issueData.description,
@@ -466,36 +380,18 @@ const useProjectStore = create(
             )
           }));
           set({ isLoading: false });
+          notify({ title: 'Issue Reported', body: `${createdIssue.title || 'Issue'} created` });
+          pushViaServer({ title: 'Issue Reported', body: `${createdIssue.title || 'Issue'} created`, data: { url: `/projects/${projectId}?tab=issues` } });
           return { success: true, issue: createdIssue };
         } catch (error) {
-          console.error('Failed to add issue:', error);
           set({ isLoading: false });
-          
-          // Provide user-friendly error messages
-          let errorMessage = 'Failed to add issue. Please try again.';
-          
-          if (error.message?.includes('Connection to database failed')) {
-            errorMessage = 'Connection to database failed. Please check your internet connection and try again.';
-          } else if (error.message?.includes('Authentication failed')) {
-            errorMessage = 'Authentication failed. Please log in again.';
-          } else if (error.message?.includes('Access denied')) {
-            errorMessage = 'Access denied. You may not have permission to create issues in this project.';
-          } else if (error.message?.includes('You must be logged in')) {
-            errorMessage = 'You must be logged in to create issues.';
-          } else if (error.message?.includes('violates not-null constraint')) {
-            errorMessage = 'Please fill in all required fields.';
-          } else if (error.message?.includes('violates foreign key constraint')) {
-            errorMessage = 'Invalid project or task reference. Please try again.';
-          }
-          
-          return { success: false, error: errorMessage };
+          return { success: false, error: 'Failed to add issue. Please try again.' };
         }
       },
 
       updateIssue: async (projectId, issueId, updates) => {
         set({ isLoading: true });
         try {
-          // Map updates to snake_case for database
           const updatesForDB = {
             ...updates,
             assigned_to: updates.assignedTo !== undefined ? updates.assignedTo : undefined,
@@ -503,7 +399,6 @@ const useProjectStore = create(
             task_id: updates.taskId !== undefined ? updates.taskId : undefined
           };
           
-          // Remove camelCase properties that shouldn't go to DB
           delete updatesForDB.assignedTo;
           delete updatesForDB.reportedBy;
           delete updatesForDB.taskId;
@@ -522,8 +417,9 @@ const useProjectStore = create(
             )
           }));
           set({ isLoading: false });
+          notify({ title: 'Issue Updated', body: `Issue updated successfully` });
+          pushViaServer({ title: 'Issue Updated', body: `Issue updated`, data: { url: `/projects/${projectId}?tab=issues` } });
         } catch (error) {
-          console.error('Failed to update issue:', error);
           set({ isLoading: false });
           throw error;
         }
@@ -591,7 +487,6 @@ const useProjectStore = create(
         const { projects } = get();
         const project = projects.find(project => project.id === projectId);
         
-        // Return project with default arrays for missing properties
         if (project) {
           return {
             ...project,
@@ -649,7 +544,6 @@ const useProjectStore = create(
         const completedTotal = project.billingItems
           .filter(item => item.status === 'completed')
           .reduce((total, item) => total + (item.totalPrice || 0), 0);
-        // If advance amount exceeds completed work, it reduces the remaining amount
         const excessAdvance = Math.max(0, advanceAmount - completedTotal);
         return Math.max(0, remainingTotal - excessAdvance);
       },
@@ -774,7 +668,7 @@ const useProjectStore = create(
         return companyProjects.reduce((sum, project) => sum + get().getProjectSpentTotal(project.id), 0);
       },
 
-      // Mark project as paid
+      // Mark project as paid/unpaid
       markProjectAsPaid: async (projectId) => {
         set({ isLoading: true });
         try {
@@ -785,14 +679,14 @@ const useProjectStore = create(
             ),
             isLoading: false
           }));
+          notify({ title: 'Payment Received', body: 'Project marked as paid' });
+          pushViaServer({ title: 'Payment Received', body: 'Project marked as paid', data: { url: `/projects/${projectId}` } });
         } catch (error) {
-          console.error('Failed to mark project as paid:', error);
           set({ isLoading: false });
           throw error;
         }
       },
 
-      // Mark project as unpaid
       markProjectAsUnpaid: async (projectId) => {
         set({ isLoading: true });
         try {
@@ -803,8 +697,9 @@ const useProjectStore = create(
             ),
             isLoading: false
           }));
+          notify({ title: 'Payment Reverted', body: 'Project marked as unpaid' });
+          pushViaServer({ title: 'Payment Reverted', body: 'Project marked as unpaid', data: { url: `/projects/${projectId}` } });
         } catch (error) {
-          console.error('Failed to mark project as unpaid:', error);
           set({ isLoading: false });
           throw error;
         }
@@ -846,8 +741,6 @@ const useProjectStore = create(
       // Task Groups Management
       addTaskGroup: async (projectId, groupData) => {
         try {
-          console.log('Adding task group to project:', projectId, groupData);
-          
           const newTaskGroup = await createTaskGroupService(projectId, groupData);
           
           // Update local state
@@ -862,32 +755,15 @@ const useProjectStore = create(
             )
           }));
           
-          console.log('Task group added successfully:', newTaskGroup);
+          notify({ title: 'Task Group Added', body: `${newTaskGroup.name || 'Group'} added` });
           return { success: true, taskGroup: newTaskGroup };
         } catch (error) {
-          console.error('Failed to add task group:', error);
-          
-          // Provide user-friendly error messages
-          let errorMessage = 'Failed to add task group. Please try again.';
-          
-          if (error.message?.includes('Connection to database failed')) {
-            errorMessage = 'Connection to database failed. Please check your internet connection and try again.';
-          } else if (error.message?.includes('Authentication failed')) {
-            errorMessage = 'Authentication failed. Please log in again.';
-          } else if (error.message?.includes('Access denied')) {
-            errorMessage = 'Access denied. You may not have permission to create task groups in this project.';
-          } else if (error.message?.includes('You must be logged in')) {
-            errorMessage = 'You must be logged in to create task groups.';
-          }
-          
-          return { success: false, error: errorMessage };
+          return { success: false, error: 'Failed to add task group. Please try again.' };
         }
       },
 
       updateTaskGroup: async (projectId, groupId, updates) => {
         try {
-          console.log('Updating task group:', { projectId, groupId, updates });
-          
           const updatedTaskGroup = await updateTaskGroupService(groupId, updates);
           
           // Update local state
@@ -904,32 +780,15 @@ const useProjectStore = create(
             )
           }));
           
-          console.log('Task group updated successfully:', updatedTaskGroup);
+          notify({ title: 'Task Group Updated', body: `${updatedTaskGroup.name || 'Group'} updated` });
           return { success: true, taskGroup: updatedTaskGroup };
         } catch (error) {
-          console.error('Failed to update task group:', error);
-          
-          // Provide user-friendly error messages
-          let errorMessage = 'Failed to update task group. Please try again.';
-          
-          if (error.message?.includes('Connection to database failed')) {
-            errorMessage = 'Connection to database failed. Please check your internet connection and try again.';
-          } else if (error.message?.includes('Authentication failed')) {
-            errorMessage = 'Authentication failed. Please log in again.';
-          } else if (error.message?.includes('Access denied')) {
-            errorMessage = 'Access denied. You may not have permission to update task groups in this project.';
-          } else if (error.message?.includes('You must be logged in')) {
-            errorMessage = 'You must be logged in to update task groups.';
-          }
-          
-          return { success: false, error: errorMessage };
+          return { success: false, error: 'Failed to update task group. Please try again.' };
         }
       },
 
       deleteTaskGroup: async (projectId, groupId) => {
         try {
-          console.log('Deleting task group:', { projectId, groupId });
-          
           await deleteTaskGroupService(groupId);
           
           // Update local state
@@ -944,25 +803,10 @@ const useProjectStore = create(
             )
           }));
           
-          console.log('Task group deleted successfully');
+          notify({ title: 'Task Group Deleted', body: `Group deleted successfully` });
           return { success: true };
         } catch (error) {
-          console.error('Failed to delete task group:', error);
-          
-          // Provide user-friendly error messages
-          let errorMessage = 'Failed to delete task group. Please try again.';
-          
-          if (error.message?.includes('Connection to database failed')) {
-            errorMessage = 'Connection to database failed. Please check your internet connection and try again.';
-          } else if (error.message?.includes('Authentication failed')) {
-            errorMessage = 'Authentication failed. Please log in again.';
-          } else if (error.message?.includes('Access denied')) {
-            errorMessage = 'Access denied. You may not have permission to delete task groups in this project.';
-          } else if (error.message?.includes('You must be logged in')) {
-            errorMessage = 'You must be logged in to delete task groups.';
-          }
-          
-          return { success: false, error: errorMessage };
+          return { success: false, error: 'Failed to delete task group. Please try again.' };
         }
       },
 
@@ -989,8 +833,6 @@ const useProjectStore = create(
       // Advance Payment Management
       updateProjectAdvance: async (projectId, advanceData) => {
         try {
-          console.log('Updating project advance payment:', { projectId, advanceData });
-          
           const updatedProject = await updateProjectAdvance(projectId, advanceData);
           
           // Update local state
@@ -1008,25 +850,11 @@ const useProjectStore = create(
             )
           }));
           
-          console.log('Project advance payment updated successfully:', updatedProject);
+          notify({ title: 'Advance Updated', body: `Advance set to ₹${(advanceData.advanceAmount || 0).toLocaleString()}` });
+          pushViaServer({ title: 'Advance Updated', body: `Advance set to ₹${(advanceData.advanceAmount || 0).toLocaleString()}`, data: { url: `/projects/${projectId}?tab=invoice` } });
           return { success: true, project: updatedProject };
         } catch (error) {
-          console.error('Failed to update project advance payment:', error);
-          
-          // Provide user-friendly error messages
-          let errorMessage = 'Failed to update advance payment. Please try again.';
-          
-          if (error.message?.includes('Connection to database failed')) {
-            errorMessage = 'Connection to database failed. Please check your internet connection and try again.';
-          } else if (error.message?.includes('Authentication failed')) {
-            errorMessage = 'Authentication failed. Please log in again.';
-          } else if (error.message?.includes('Access denied')) {
-            errorMessage = 'Access denied. You may not have permission to update advance payments for this project.';
-          } else if (error.message?.includes('You must be logged in')) {
-            errorMessage = 'You must be logged in to update advance payments.';
-          }
-          
-          return { success: false, error: errorMessage };
+          return { success: false, error: 'Failed to update advance payment. Please try again.' };
         }
       },
 
@@ -1035,7 +863,6 @@ const useProjectStore = create(
           const advanceData = await getProjectAdvance(projectId);
           return advanceData;
         } catch (error) {
-          console.error('Failed to get project advance payment:', error);
           return {
             advanceAmount: 0,
             advancePaymentDate: null,
