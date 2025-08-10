@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useProjectStore } from '../../stores/projectStore';
 import { useAuthStore } from '../../stores/authStore';
 import OnlineStatus from './OnlineStatus';
+
 import { 
   TrendingUp, 
   Calendar, 
@@ -181,27 +182,31 @@ const Dashboard = () => {
     return (
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-3">
-            {user?.avatar ? (
-              <img 
-                src={user.avatar} 
-                alt={user.name}
-                className="w-12 h-12 rounded-full object-cover"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'flex';
-                }}
-              />
-            ) : null}
-            <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-xl font-bold text-gray-600" style={{ display: user?.avatar ? 'none' : 'flex' }}>
-              {user.name.charAt(0).toUpperCase()}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
+              {user?.avatar ? (
+                <img 
+                  src={user.avatar} 
+                  alt={user.name}
+                  className="w-12 h-12 rounded-full object-cover"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-xl font-bold text-gray-600" style={{ display: user?.avatar ? 'none' : 'flex' }}>
+                {user.name.charAt(0).toUpperCase()}
+              </div>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Welcome back, {user.name}!</h1>
+              <p className="text-gray-600">Here's what's happening with your assigned projects</p>
             </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Welcome back, {user.name}!</h1>
-            <p className="text-gray-600">Here's what's happening with your assigned projects</p>
-          </div>
+          
+
         </div>
 
         {/* Designer Stats */}
@@ -412,9 +417,13 @@ const Dashboard = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600">Overview of your project management system</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-600">Overview of your project management system</p>
+        </div>
+        
+
       </div>
 
       {/* Stats */}

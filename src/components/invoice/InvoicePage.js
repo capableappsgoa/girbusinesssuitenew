@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../stores/authStore';
 import { useProjectStore } from '../../stores/projectStore';
+
 import html2canvas from 'html2canvas';
 import './InvoicePage.css';
 
@@ -568,51 +569,49 @@ const InvoicePage = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 p-4">
-                    {/* Controls */}
-       <div className="max-w-4xl mx-auto mb-4 print-hidden">
-         <div className="flex justify-between items-center">
-           <div className="flex-1 mr-4">
-             <select
-               id="project-select-invoice"
-               value={selectedProjectId}
-               onChange={(e) => setSelectedProjectId(e.target.value)}
-               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-             >
-               <option value="">Choose a project...</option>
-               {projects.map((project) => (
-                 <option key={project.id} value={project.id}>
-                   {project.name} - {project.company?.name || 'No Company'}
-                 </option>
-               ))}
-             </select>
-           </div>
-                       <div className="flex ">
-              <div className="flex items-center justify-center">
-                
-                <div className="flex space-x-2">
-                  
-                  <button
-                    onClick={() => captureInvoiceAsImage('png')}
-                    disabled={capturing}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                  >
-                    {capturing ? 'Capturing...' : 'Save PNG'}
-                  </button>
-                  <button
-                    onClick={() => captureInvoiceAsImage('jpeg')}
-                    disabled={capturing}
-                    className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                  >
-                    {capturing ? 'Capturing...' : 'Save JPEG'}
-                  </button>
-                </div>
-              </div>
+      {/* Controls */}
+      <div className="max-w-4xl mx-auto mb-4 print-hidden">
+        <div className="flex justify-between items-center">
+          <div className="flex-1 mr-4">
+            <select
+              id="project-select-invoice"
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Choose a project...</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name} - {project.company?.name || 'No Company'}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="flex items-center space-x-4">
 
+            
+            <div className="flex space-x-2">
+              <button
+                onClick={() => captureInvoiceAsImage('png')}
+                disabled={capturing}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                {capturing ? 'Capturing...' : 'Save PNG'}
+              </button>
+              <button
+                onClick={() => captureInvoiceAsImage('jpeg')}
+                disabled={capturing}
+                className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                {capturing ? 'Capturing...' : 'Save JPEG'}
+              </button>
             </div>
-         </div>
-       </div>
+          </div>
+        </div>
+      </div>
 
-       {/* Captured Images Section */}
+      {/* Captured Images Section */}
        {capturedImages.length > 0 && (
          <div className="max-w-4xl mx-auto mb-4 print-hidden">
            <div className="bg-white rounded-lg border p-4">

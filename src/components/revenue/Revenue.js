@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useProjectStore } from '../../stores/projectStore';
+
 import {
   TrendingUp,
   DollarSign,
@@ -95,9 +96,14 @@ const Revenue = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Revenue Overview</h1>
-        <p className="text-gray-600">Track project revenue, completed work, and pending payments</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Revenue Overview</h1>
+          <p className="text-gray-600">Track project revenue, completed work, and pending payments</p>
+        </div>
+        
+        {/* User Switcher for Admins and Managers */}
+
       </div>
 
       {/* Statistics Cards */}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useProjectStore } from '../../stores/projectStore';
+
 import {
   Plus,
   Filter,
@@ -166,15 +167,20 @@ const Projects = () => {
           <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
           <p className="text-gray-600">Manage your projects and track progress</p>
         </div>
-        {(user?.role === 'admin' || user?.role === 'manager') && (
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="btn-primary flex items-center space-x-2"
-          >
-            <Plus className="h-4 w-4" />
-            <span>New Project</span>
-          </button>
-        )}
+        <div className="flex items-center space-x-4">
+          {/* User Switcher for Admins and Managers */}
+          
+          
+          {(user?.role === 'admin' || user?.role === 'manager') && (
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="btn-primary flex items-center space-x-2"
+            >
+              <Plus className="h-4 w-4" />
+              <span>New Project</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Filters */}

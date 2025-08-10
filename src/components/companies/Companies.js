@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useProjectStore } from '../../stores/projectStore';
+
 import { testConnection } from '../../lib/supabase';
 import { 
   Plus, 
@@ -278,22 +279,27 @@ const Companies = () => {
           <h1 className="text-2xl font-bold text-gray-900">Companies</h1>
           <p className="text-gray-600">Manage your client companies and organizations</p>
         </div>
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={handleTestConnection}
-            className="btn-secondary flex items-center space-x-2"
-            title="Test database connection"
-          >
-            <Wifi className="h-4 w-4" />
-            <span>Test Connection</span>
-          </button>
-          <button
-            onClick={openAddModal}
-            className="btn-primary flex items-center space-x-2"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Add Company</span>
-          </button>
+        <div className="flex items-center space-x-4">
+          {/* User Switcher for Admins and Managers */}
+  
+          
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={handleTestConnection}
+              className="btn-secondary flex items-center space-x-2"
+              title="Test database connection"
+            >
+              <Wifi className="h-4 w-4" />
+              <span>Test Connection</span>
+            </button>
+            <button
+              onClick={openAddModal}
+              className="btn-primary flex items-center space-x-2"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Add Company</span>
+            </button>
+          </div>
         </div>
       </div>
 

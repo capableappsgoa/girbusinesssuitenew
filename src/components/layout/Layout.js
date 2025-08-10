@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useProjectStore } from '../../stores/projectStore';
+import UserSwitcher from '../common/UserSwitcher';
+import { getAllowedUsers } from '../../config/userSwitcherConfig';
 import {
   Menu,
   X,
@@ -144,6 +146,9 @@ const Layout = ({ children }) => {
               <button className="p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                 <Bell className="h-6 w-6" />
               </button>
+
+              {/* User Switcher - Configure in src/config/userSwitcherConfig.js */}
+              <UserSwitcher allowedUsers={getAllowedUsers()} />
 
               {/* User menu */}
               <div className="flex items-center space-x-3">
