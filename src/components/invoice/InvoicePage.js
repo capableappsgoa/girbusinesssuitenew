@@ -751,8 +751,8 @@ const InvoicePage = () => {
                         }}>
                                                                                 <td className="py-4 px-6 text-sm text-gray-700" style={{ width: '40%', border: '1px solid #e5e7eb' }}>{item.name || 'Unnamed Item'}</td>
                             <td className="py-4 px-6 text-sm text-gray-700 text-right" style={{ width: '20%', border: '1px solid #e5e7eb' }}>{quantity}</td>
-                            <td className="py-4 px-6 text-sm text-gray-700 text-right" style={{ width: '20%', border: '1px solid #e5e7eb' }}>${unitPrice.toFixed(2)}</td>
-                            <td className="py-4 px-6 text-sm text-gray-700 text-right font-semibold" style={{ width: '20%', border: '1px solid #e5e7eb' }}>${amount.toFixed(2)}</td>
+                            <td className="py-4 px-6 text-sm text-gray-700 text-right" style={{ width: '20%', border: '1px solid #e5e7eb' }}>₹{unitPrice.toFixed(2)}</td>
+                            <td className="py-4 px-6 text-sm text-gray-700 text-right font-semibold" style={{ width: '20%', border: '1px solid #e5e7eb' }}>₹{amount.toFixed(2)}</td>
                         </tr>
                      );
                    })}
@@ -772,23 +772,23 @@ const InvoicePage = () => {
                 }}>
                                     <div className="flex justify-between py-3 border-b border-yellow-400">
                      <span className="text-sm font-medium" style={{ color: '#FFD700' }}>Subtotal:</span>
-                     <span className="text-sm font-medium" style={{ color: '#FFD700' }}>${invoiceData.subtotal.toFixed(2)}</span>
+                     <span className="text-sm font-medium" style={{ color: '#FFD700' }}>₹{invoiceData.subtotal.toFixed(2)}</span>
                    </div>
                    {invoiceData.discountPercentage > 0 && (
                      <div className="flex justify-between py-3 border-b border-yellow-400">
                        <span className="text-sm font-medium" style={{ color: '#FFD700' }}>Discount ({invoiceData.discountPercentage}%):</span>
-                       <span className="text-sm font-medium" style={{ color: '#FFD700' }}>-${invoiceData.discountAmount.toFixed(2)}</span>
+                       <span className="text-sm font-medium" style={{ color: '#FFD700' }}>-₹{invoiceData.discountAmount.toFixed(2)}</span>
                      </div>
                    )}
                    {invoiceData.advanceAmount > 0 && (
                      <div className="flex justify-between py-3 border-b border-yellow-400">
                        <span className="text-sm font-medium" style={{ color: '#FFD700' }}>Advance Payment:</span>
-                       <span className="text-sm font-medium" style={{ color: '#FFD700' }}>-${invoiceData.advanceAmount.toFixed(2)}</span>
+                       <span className="text-sm font-medium" style={{ color: '#FFD700' }}>-₹{invoiceData.advanceAmount.toFixed(2)}</span>
                      </div>
                    )}
                    <div className="flex justify-between py-4">
                      <span className="text-xl font-bold" style={{ color: '#FFD700' }}>Total Due:</span>
-                     <span className="text-xl font-bold" style={{ color: '#FFD700' }}>${invoiceData.total.toFixed(2)}</span>
+                     <span className="text-xl font-bold" style={{ color: '#FFD700' }}>₹{invoiceData.total.toFixed(2)}</span>
                    </div>
                 </div>
               </div>

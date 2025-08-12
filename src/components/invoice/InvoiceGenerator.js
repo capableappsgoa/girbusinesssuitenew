@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { FileText, DollarSign, Calendar, User, MapPin, Phone, Mail, Globe, Briefcase, IndianRupee } from 'lucide-react';
+import { FileText, Calendar, User, MapPin, Phone, Mail, Globe, Briefcase, IndianRupee } from 'lucide-react';
 import Logo from './Logo';
 
 const InvoiceGenerator = ({ project, discount = 0 }) => {
