@@ -59,12 +59,14 @@ const ProjectInvoice = ({ project }) => {
     unitPrice: 0
   });
 
+  // Get the raw billing total without advance deduction
+  const rawBillingTotal = project?.billingItems?.reduce((total, item) => total + (item.totalPrice || 0), 0) || 0;
   const billingTotal = getProjectBillingTotal(project?.id);
   const completedTotal = getProjectSpentTotal(project?.id); // This gets completed items
   const remainingTotal = getProjectRemainingTotal(project?.id); // Remaining items (pending + in-progress)
-  const discountAmount = (billingTotal * discount) / 100;
+  const discountAmount = (rawBillingTotal * discount) / 100;
   const advanceAmount = project?.advanceAmount || 0;
-  const subtotalAfterDiscount = billingTotal - discountAmount;
+  const subtotalAfterDiscount = rawBillingTotal - discountAmount;
   const finalTotal = subtotalAfterDiscount - advanceAmount;
 
   // Synchronize discount with store and project
@@ -87,8 +89,14 @@ const ProjectInvoice = ({ project }) => {
 
   // Debug: Log project billing items
   console.log('Project billing items:', project?.billingItems);
-  console.log('Billing total:', billingTotal);
+  console.log('Raw billing total:', rawBillingTotal);
+  console.log('Billing total (with advance deducted):', billingTotal);
   console.log('Project ID:', project?.id);
+  console.log('Advance amount:', advanceAmount);
+  console.log('Discount:', discount);
+  console.log('Discount amount:', discountAmount);
+  console.log('Subtotal after discount:', subtotalAfterDiscount);
+  console.log('Final total:', finalTotal);
 
   const handleAddBillingItem = async () => {
     console.log('Adding billing item:', newBillingItem);

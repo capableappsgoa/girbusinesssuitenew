@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { FileText, DollarSign, Calendar, User, MapPin, Phone, Mail, Globe, Briefcase } from 'lucide-react';
+import { FileText, DollarSign, Calendar, User, MapPin, Phone, Mail, Globe, Briefcase, IndianRupee } from 'lucide-react';
 import Logo from './Logo';
 
 const InvoiceGenerator = ({ project, discount = 0 }) => {
@@ -1481,7 +1481,7 @@ const InvoiceGenerator = ({ project, discount = 0 }) => {
               <div className="bg-gradient-to-r from-gray-900 to-black text-white px-8 py-6">
                 <div className="grid grid-cols-12 gap-6 font-bold text-lg">
                   <div className="col-span-4 flex items-center">
-                    <DollarSign size={20} className="mr-2 text-yellow-400" />
+                    <IndianRupee size={20} className="mr-2 text-yellow-400" />
                     Item
                   </div>
                   <div className="col-span-4 flex items-center">
@@ -1493,7 +1493,7 @@ const InvoiceGenerator = ({ project, discount = 0 }) => {
                     Qty
                   </div>
                   <div className="col-span-2 text-right flex items-center justify-end">
-                    <DollarSign size={20} className="mr-2 text-yellow-400" />
+                    <IndianRupee size={20} className="mr-2 text-yellow-400" />
                     Amount
                   </div>
                 </div>
@@ -1589,7 +1589,7 @@ const InvoiceGenerator = ({ project, discount = 0 }) => {
             <div className="grid grid-cols-2 gap-12">
               <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
                 <h4 className="font-bold text-xl text-gray-900 mb-3 flex items-center">
-                  <DollarSign size={20} className="mr-2 text-yellow-600" />
+                  <IndianRupee size={20} className="mr-2 text-yellow-600" />
                   Payment Terms
                 </h4>
                 <p className="text-gray-700 leading-relaxed">

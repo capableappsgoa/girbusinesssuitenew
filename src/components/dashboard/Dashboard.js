@@ -313,6 +313,62 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* Recent Tasks */}
+        <div className="bg-white rounded-lg border">
+          <div className="p-4 border-b">
+            <h3 className="font-semibold text-gray-900">Recent Tasks</h3>
+            <p className="text-sm text-gray-600">Your recently assigned tasks</p>
+          </div>
+          <div className="p-4">
+            {userTasks.length === 0 ? (
+              <div className="text-center py-8">
+                <CheckCircle size={48} className="mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No tasks assigned</h3>
+                <p className="text-gray-600">You don't have any tasks assigned yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {userTasks
+                  .sort((a, b) => {
+                    try {
+                      const dateA = new Date(b.createdAt || b.created_at);
+                      const dateB = new Date(a.createdAt || a.created_at);
+                      if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) return 0;
+                      return dateA - dateB;
+                    } catch (error) {
+                      console.error('Date sorting error:', error);
+                      return 0;
+                    }
+                  })
+                  .slice(0, 5)
+                  .map(task => (
+                    <div key={task.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900">{task.title}</h4>
+                        <p className="text-sm text-gray-600">{task.projectName}</p>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            task.status === 'completed' ? 'bg-green-100 text-green-800' :
+                            task.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
+                            task.status === 'review' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {task.status.replace('-', ' ')}
+                          </span>
+                          <span className="text-xs text-gray-500">{task.progress || 0}% complete</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-gray-900">{safeFormat(task.createdAt || task.created_at, 'MMM dd')}</p>
+                        <p className="text-xs text-gray-500">{safeFormat(task.createdAt || task.created_at, 'HH:mm')}</p>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* My Issues */}
         <div className="bg-white rounded-lg border">
           <div className="p-4 border-b">

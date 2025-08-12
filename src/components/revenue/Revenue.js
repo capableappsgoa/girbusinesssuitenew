@@ -37,9 +37,18 @@ const Revenue = () => {
   }, [loadProjects]);
 
   // Calculate overall statistics
-  const totalRevenue = projects.reduce((sum, project) => sum + getProjectBillingTotal(project.id), 0);
-  const totalCompleted = projects.reduce((sum, project) => sum + getProjectSpentTotal(project.id), 0);
-  const totalPending = projects.reduce((sum, project) => sum + getProjectRemainingTotal(project.id), 0);
+  const totalRevenue = projects.reduce((sum, project) => {
+    const rawBillingTotal = project.billingItems?.reduce((total, item) => total + (item.totalPrice || 0), 0) || 0;
+    return sum + rawBillingTotal;
+  }, 0);
+  const totalPaid = projects.reduce((sum, project) => {
+    const rawBillingTotal = project.billingItems?.reduce((total, item) => total + (item.totalPrice || 0), 0) || 0;
+    const projectPaid = project.paid ? rawBillingTotal : 0;
+    const projectAdvance = project.advanceAmount || 0;
+    return sum + projectPaid + projectAdvance;
+  }, 0);
+  const totalAdvance = projects.reduce((sum, project) => sum + (project.advanceAmount || 0), 0);
+  const totalPending = totalRevenue - totalPaid; // Unpaid amount
   const totalProjects = projects.length;
   const completedProjects = projects.filter(p => p.status === 'completed').length;
   const paidProjects = projects.filter(p => p.paid).length;
@@ -56,7 +65,9 @@ const Revenue = () => {
     .sort((a, b) => {
       switch (sortBy) {
         case 'revenue':
-          return getProjectBillingTotal(b.id) - getProjectBillingTotal(a.id);
+          const aRevenue = a.billingItems?.reduce((total, item) => total + (item.totalPrice || 0), 0) || 0;
+          const bRevenue = b.billingItems?.reduce((total, item) => total + (item.totalPrice || 0), 0) || 0;
+          return bRevenue - aRevenue;
         case 'completed':
           return getProjectSpentTotal(b.id) - getProjectSpentTotal(a.id);
         case 'name':
@@ -106,49 +117,39 @@ const Revenue = () => {
 
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Revenue</p>
-              <p className="text-2xl font-bold text-gray-900">₹{totalRevenue.toLocaleString()}</p>
+                           {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Paid Revenue</p>
+                <p className="text-2xl font-bold text-green-600">₹{totalPaid.toLocaleString()}</p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-green-500" />
             </div>
-            <TrendingUp className="h-8 w-8 text-green-500" />
           </div>
-        </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Completed Revenue</p>
-              <p className="text-2xl font-bold text-green-600">₹{totalCompleted.toLocaleString()}</p>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Pending Revenue</p>
+                <p className="text-2xl font-bold text-orange-600">₹{totalPending.toLocaleString()}</p>
+              </div>
+              <Clock className="h-8 w-8 text-orange-500" />
             </div>
-            <CheckCircle className="h-8 w-8 text-green-500" />
           </div>
-        </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Pending Revenue</p>
-              <p className="text-2xl font-bold text-orange-600">₹{totalPending.toLocaleString()}</p>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Projects</p>
+                <p className="text-2xl font-bold text-purple-600">{totalProjects}</p>
+                <p className="text-xs text-gray-500">{completedProjects} completed, {paidProjects} paid</p>
+              </div>
+              <Users className="h-8 w-8 text-purple-500" />
             </div>
-            <Clock className="h-8 w-8 text-orange-500" />
           </div>
         </div>
-
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Projects</p>
-              <p className="text-2xl font-bold text-blue-600">{totalProjects}</p>
-              <p className="text-xs text-gray-500">{completedProjects} completed, {paidProjects} paid</p>
-            </div>
-            <Users className="h-8 w-8 text-blue-500" />
-          </div>
-        </div>
-      </div>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
@@ -198,10 +199,12 @@ const Revenue = () => {
         ) : (
           <div className="divide-y divide-gray-200">
             {filteredProjects.map((project) => {
-              const projectTotal = getProjectBillingTotal(project.id);
-              const projectCompleted = getProjectSpentTotal(project.id);
-              const projectPending = getProjectRemainingTotal(project.id);
-              const completionRate = projectTotal > 0 ? (projectCompleted / projectTotal) * 100 : 0;
+              const rawBillingTotal = project.billingItems?.reduce((total, item) => total + (item.totalPrice || 0), 0) || 0;
+              const projectTotal = rawBillingTotal;
+              const projectPaid = (project.paid ? projectTotal : 0) + (project.advanceAmount || 0);
+              const projectAdvance = project.advanceAmount || 0;
+              const projectPending = projectTotal - projectPaid; // Unpaid amount
+              const completionRate = projectTotal > 0 ? (projectPaid / projectTotal) * 100 : 0;
 
               return (
                 <div key={project.id} className="p-6 hover:bg-gray-50 transition-colors">
@@ -239,27 +242,21 @@ const Revenue = () => {
                         </div>
                       </div>
 
-                      {/* Revenue Breakdown */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div className="bg-gray-50 p-3 rounded-lg">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">Total Revenue</span>
-                            <span className="font-semibold text-gray-900">₹{projectTotal.toLocaleString()}</span>
+                                                                                           {/* Revenue Breakdown */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <div className="bg-green-50 p-3 rounded-lg">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-green-600">Paid Revenue</span>
+                              <span className="font-semibold text-green-700">₹{projectPaid.toLocaleString()}</span>
+                            </div>
+                          </div>
+                          <div className="bg-orange-50 p-3 rounded-lg">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-orange-600">Pending</span>
+                              <span className="font-semibold text-orange-700">₹{projectPending.toLocaleString()}</span>
+                            </div>
                           </div>
                         </div>
-                        <div className="bg-green-50 p-3 rounded-lg">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-green-600">Completed</span>
-                            <span className="font-semibold text-green-700">₹{projectCompleted.toLocaleString()}</span>
-                          </div>
-                        </div>
-                        <div className="bg-orange-50 p-3 rounded-lg">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-orange-600">Pending</span>
-                            <span className="font-semibold text-orange-700">₹{projectPending.toLocaleString()}</span>
-                          </div>
-                        </div>
-                      </div>
 
                       {/* Progress Bar */}
                       <div className="mb-4">
