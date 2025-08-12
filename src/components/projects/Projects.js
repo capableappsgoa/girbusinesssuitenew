@@ -407,37 +407,37 @@ const Projects = () => {
                         </div>
                       )}
 
-                      {/* Admin Controls - Fixed positioning to prevent overlapping */}
-                      {user.role === 'admin' && (
-                        <div className="absolute top-12 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
-                          <div className="flex space-x-1">
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setSelectedProject(project);
-                                setShowEditModal(true);
-                              }}
-                              className="p-2 bg-white rounded-lg shadow-md hover:bg-gray-50 transition-colors"
-                            >
-                              <Edit className="h-4 w-4 text-gray-600" />
-                            </button>
-                            
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                if (window.confirm('Are you sure you want to delete this project?')) {
-                                  deleteProject(project.id);
-                                }
-                              }}
-                              className="p-2 bg-white rounded-lg shadow-md hover:bg-red-50 transition-colors"
-                            >
-                              <Trash2 className="h-4 w-4 text-red-600" />
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                                             {/* Admin Controls - Bottom right positioning */}
+                       {user.role === 'admin' && (
+                         <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+                           <div className="flex space-x-1">
+                             <button
+                               onClick={(e) => {
+                                 e.preventDefault();
+                                 e.stopPropagation();
+                                 setSelectedProject(project);
+                                 setShowEditModal(true);
+                               }}
+                               className="p-2 bg-white rounded-lg shadow-md hover:bg-gray-50 transition-colors"
+                             >
+                               <Edit className="h-4 w-4 text-gray-600" />
+                             </button>
+                             
+                             <button
+                               onClick={(e) => {
+                                 e.preventDefault();
+                                 e.stopPropagation();
+                                 if (window.confirm('Are you sure you want to delete this project?')) {
+                                   deleteProject(project.id);
+                                 }
+                               }}
+                               className="p-2 bg-white rounded-lg shadow-md hover:bg-red-50 transition-colors"
+                             >
+                               <Trash2 className="h-4 w-4 text-red-600" />
+                             </button>
+                           </div>
+                         </div>
+                       )}
                     </div>
                   );
                 })}
